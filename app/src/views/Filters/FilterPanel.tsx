@@ -38,12 +38,12 @@ export function FilterPanel() {
     <div className="pointer-events-auto relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="rounded-lg border border-white/10 bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur hover:bg-black/80"
+        className="ascipio-panel ascipio-chip-hover rounded-lg px-3 py-1.5 text-xs backdrop-blur"
       >
         Filters{activeCount > 0 ? ` (${activeCount})` : ''}
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-10 mt-1 w-64 rounded-lg border border-white/10 bg-black/90 p-3 text-xs text-white backdrop-blur">
+        <div className="ascipio-panel-solid absolute right-0 top-full z-10 mt-1 w-64 rounded-lg p-3 text-xs backdrop-blur">
           <label className="mb-1.5 flex items-center gap-2">
             <input
               type="checkbox"
@@ -63,7 +63,7 @@ export function FilterPanel() {
 
           {tags.length > 0 && (
             <>
-              <div className="mb-1 mt-2 text-white/50">
+              <div className="ascipio-muted mb-1 mt-2">
                 Click to require a tag, shift-click to exclude it
               </div>
               <div className="flex max-h-40 flex-wrap gap-1 overflow-y-auto">
@@ -79,8 +79,8 @@ export function FilterPanel() {
                         (included
                           ? 'bg-[var(--ascipio-accent-blue)] text-white'
                           : excluded
-                            ? 'bg-rose-500/30 text-rose-200 line-through'
-                            : 'bg-white/10 text-white/70 hover:bg-white/20')
+                            ? 'bg-[var(--ascipio-accent-red)]/30 line-through'
+                            : 'ascipio-chip ascipio-chip-hover')
                       }
                     >
                       #{tag}
@@ -96,7 +96,7 @@ export function FilterPanel() {
               onClick={() =>
                 setFilters({ includedTags: [], excludedTags: [], hideOrphans: false, hideDoneTodos: false })
               }
-              className="mt-2 w-full rounded bg-white/10 px-2 py-1 text-center hover:bg-white/20"
+              className="ascipio-chip ascipio-chip-hover mt-2 w-full rounded px-2 py-1 text-center"
             >
               Clear filters
             </button>

@@ -104,6 +104,14 @@ org-ascipio inside an Emacs buffer, on Emacs builds with xwidget support."
 (defvar org-ascipio--follow-timer nil
   "Pending debounce timer for the next `follow' send, if any.")
 
+(defvar org-ascipio--theme-push-timer nil
+  "Pending debounce timer for the next theme push, if any.")
+
+;; Forward declaration: `org-ascipio-mode' is defined much later (in the
+;; Entrypoint section) via `define-minor-mode', but the theme-sync code
+;; above it needs to check whether it's currently enabled.
+(defvar org-ascipio-mode)
+
 
 ;;;; org-roam DB access
 
@@ -235,6 +243,7 @@ the whole buffer; heading nodes are narrowed to just that subtree."
   "Register WS as a client and push initial state to it."
   (push ws org-ascipio--ws-clients)
   (org-ascipio-server--send-graph-init ws)
+  (org-ascipio-server--send ws "theme" (org-ascipio-theme-tokens))
   (when org-ascipio-follow
     (org-ascipio-follow-mode 1))
   (message "[org-ascipio] client connected"))
@@ -319,16 +328,143 @@ commentary above and docs/PROTOCOL.md for the planned `graph:patch' diffing."
          :on-open #'org-ascipio-server--on-open
          :on-message #'org-ascipio-server--on-message
          :on-close #'org-ascipio-server--on-close))
-  (add-hook 'after-save-hook #'org-ascipio-server--on-save))
+  (add-hook 'after-save-hook #'org-ascipio-server--on-save)
+  (add-hook 'enable-theme-functions #'org-ascipio-theme--schedule-push))
 
 (defun org-ascipio-server-stop ()
   "Stop the org-ascipio HTTP + websocket servers."
   (remove-hook 'after-save-hook #'org-ascipio-server--on-save)
+  (remove-hook 'enable-theme-functions #'org-ascipio-theme--schedule-push)
+  (when org-ascipio--theme-push-timer
+    (cancel-timer org-ascipio--theme-push-timer)
+    (setq org-ascipio--theme-push-timer nil))
   (when org-ascipio--ws-server
     (websocket-server-close org-ascipio--ws-server)
     (setq org-ascipio--ws-server nil))
   (setq org-ascipio--ws-clients nil)
   (httpd-stop))
+
+
+;;;; Theme sync: mirror the current Emacs theme into the web UI
+
+;; Unlike the old org-roam-ui (which required manually running `M-x
+;; org-roam-ui-sync-theme' after every theme change, and only reliably
+;; extracted colors from Doom themes via `doom-themes--colors'), this hooks
+;; `enable-theme-functions' -- built into Emacs 27.1+, fires on every
+;; `load-theme'/`enable-theme' call -- so it happens automatically, and
+;; treats face-based extraction as the PRIMARY path (works with any theme,
+;; Doom or not), using Doom's color table only to enrich specific named
+;; accents when available.
+
+(defcustom org-ascipio-sync-theme t
+  "Whether to automatically push Emacs's current theme to connected clients."
+  :group 'org-ascipio
+  :type 'boolean)
+
+(defcustom org-ascipio-theme-debounce-seconds 0.15
+  "Idle delay before pushing a theme change.
+Coalesces rapid re-themes (some theme-loading sequences fire
+`enable-theme-functions' more than once in quick succession, e.g.
+disabling all themes then enabling one)."
+  :group 'org-ascipio
+  :type 'number)
+
+(defun org-ascipio-theme--resolve (face attribute)
+  "Resolve ATTRIBUTE (`foreground' or `background') of FACE to a real color.
+Returns nil (not the literal \"unspecified-fg\"/\"unspecified-bg\" strings
+Emacs uses internally as placeholders) if FACE does not set it."
+  (let ((color (if (eq attribute 'foreground)
+                    (face-foreground face nil t)
+                  (face-background face nil t))))
+    (unless (member color '(nil "unspecified-fg" "unspecified-bg"))
+      color)))
+
+(defun org-ascipio-theme--face-color (face attribute &optional default)
+  "Resolve ATTRIBUTE (`foreground' or `background') of FACE, walking inheritance.
+Falls back to DEFAULT, then to the `default' face's own color, then to a
+hardcoded sane color, if FACE does not set that attribute (this last
+fallback matters in practice: some minimal faces/themes leave attributes
+genuinely unspecified even with a real display attached)."
+  (or (org-ascipio-theme--resolve face attribute)
+      default
+      (org-ascipio-theme--resolve 'default attribute)
+      (if (eq attribute 'foreground) "#e6ebf5" "#0b0f17")))
+
+(defun org-ascipio-theme--mode ()
+  "Return \"dark\" or \"light\" based on the current frame's background mode."
+  (if (eq (frame-parameter nil 'background-mode) 'light) "light" "dark"))
+
+(defun org-ascipio-theme--doom-color (name fallback)
+  "Look up NAME in `doom-themes--colors' when bound and non-nil, else FALLBACK."
+  (or (and (bound-and-true-p doom-themes--colors)
+           (cadr (assq name doom-themes--colors)))
+      fallback))
+
+(defun org-ascipio-theme--todo-colors ()
+  "Map org TODO keywords to colors, from `org-todo-keyword-faces' when set."
+  (let (result)
+    (dolist (cell org-todo-keyword-faces)
+      (let* ((face-spec (cdr cell))
+             (color (cond
+                     ((stringp face-spec) face-spec)
+                     ((facep face-spec) (face-foreground face-spec nil t))
+                     ((and (listp face-spec) (plist-get face-spec :foreground))
+                      (plist-get face-spec :foreground)))))
+        (when color (push (cons (car cell) color) result))))
+    (if result result (make-hash-table :size 0)))) ; encodes as `{}', not `null'
+
+(defun org-ascipio-theme-tokens ()
+  "Build a ThemeTokens alist (see docs/PROTOCOL.md) from the current Emacs theme."
+  (let* ((fg (org-ascipio-theme--face-color 'default 'foreground))
+         (bg (org-ascipio-theme--face-color 'default 'background))
+         (bg-alt (org-ascipio-theme--face-color 'mode-line-inactive 'background bg))
+         (bg-elevated (org-ascipio-theme--face-color 'mode-line 'background bg-alt))
+         (fg-alt (org-ascipio-theme--face-color 'font-lock-comment-face 'foreground fg))
+         (fg-muted (org-ascipio-theme--face-color 'shadow 'foreground fg-alt))
+         (border (org-ascipio-theme--face-color 'vertical-border 'foreground bg-alt)))
+    `((mode . ,(org-ascipio-theme--mode))
+      (bg . ,bg)
+      (bgAlt . ,bg-alt)
+      (bgElevated . ,bg-elevated)
+      (fg . ,fg)
+      (fgAlt . ,fg-alt)
+      (fgMuted . ,fg-muted)
+      (border . ,border)
+      (accent . ((red . ,(org-ascipio-theme--doom-color 'red (org-ascipio-theme--face-color 'error 'foreground)))
+                 (orange . ,(org-ascipio-theme--doom-color 'orange (org-ascipio-theme--face-color 'warning 'foreground)))
+                 (yellow . ,(org-ascipio-theme--doom-color 'yellow (org-ascipio-theme--face-color 'font-lock-builtin-face 'foreground)))
+                 (green . ,(org-ascipio-theme--doom-color 'green (org-ascipio-theme--face-color 'success 'foreground)))
+                 (cyan . ,(org-ascipio-theme--doom-color 'cyan (org-ascipio-theme--face-color 'font-lock-constant-face 'foreground)))
+                 (blue . ,(org-ascipio-theme--doom-color 'blue (org-ascipio-theme--face-color 'font-lock-keyword-face 'foreground)))
+                 (violet . ,(org-ascipio-theme--doom-color 'violet (org-ascipio-theme--face-color 'font-lock-type-face 'foreground)))
+                 (magenta . ,(org-ascipio-theme--doom-color 'magenta (org-ascipio-theme--face-color 'font-lock-preprocessor-face 'foreground)))))
+      (todoColors . ,(org-ascipio-theme--todo-colors)))))
+
+(defun org-ascipio-theme--push ()
+  "Broadcast the current theme to all connected clients."
+  (when (and org-ascipio-mode org-ascipio-sync-theme)
+    (org-ascipio-server-broadcast "theme" (org-ascipio-theme-tokens))))
+
+(defun org-ascipio-theme--schedule-push (&rest _)
+  "Debounce a theme push via `org-ascipio-theme-debounce-seconds'."
+  (when org-ascipio--theme-push-timer
+    (cancel-timer org-ascipio--theme-push-timer))
+  (setq org-ascipio--theme-push-timer
+        (run-with-idle-timer
+         org-ascipio-theme-debounce-seconds nil
+         (lambda ()
+           (setq org-ascipio--theme-push-timer nil)
+           (org-ascipio-theme--push)))))
+
+;;;###autoload
+(defun org-ascipio-sync-theme ()
+  "Manually push the current Emacs theme to connected org-ascipio clients.
+Not usually needed since `enable-theme-functions' triggers this
+automatically, but useful as an escape hatch -- e.g. after tweaking
+individual faces with `set-face-attribute' rather than loading a whole
+theme, since that does not fire `enable-theme-functions'."
+  (interactive)
+  (org-ascipio-theme--push))
 
 
 ;;;; Follow mode: drive the web UI camera from point in Emacs

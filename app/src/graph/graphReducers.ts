@@ -1,6 +1,8 @@
 import Graph from 'graphology'
 import { Filters } from '../store/appStore'
 import { GraphNode } from '../protocol/schema'
+import { graphTheme } from './graphTheme'
+import { colorForNode, ColorMode } from './nodeColor'
 
 const DONE_STATES = new Set(['DONE', 'CANCELLED', 'CANCELED'])
 
@@ -22,11 +24,8 @@ export interface ReducerRefs {
   filters: Filters
   /** Lowercased search query; empty string means "no active search". */
   searchQuery: string
+  colorMode: ColorMode
 }
-
-const DIM_COLOR = 'rgba(148, 163, 184, 0.15)'
-const SELECTED_COLOR = '#f5b942'
-const HOVER_HIGHLIGHT_COLOR = '#e6ebf5'
 
 function matchesSearch(node: GraphNode, query: string): boolean {
   if (!query) return true
@@ -43,7 +42,7 @@ function matchesSearch(node: GraphNode, query: string): boolean {
 export function createReducers(graph: Graph, refs: ReducerRefs) {
   const nodeReducer = (nodeKey: string, data: Record<string, unknown>) => {
     const node = data as unknown as GraphNode
-    const res = { ...data }
+    const res: Record<string, unknown> = { ...data, color: colorForNode(node, refs.colorMode) }
     const degree = graph.degree(nodeKey)
 
     if (!isNodeVisible(node, degree, refs.filters)) {
@@ -54,19 +53,19 @@ export function createReducers(graph: Graph, refs: ReducerRefs) {
     const query = refs.searchQuery.trim().toLowerCase()
     if (query) {
       if (matchesSearch(node, query)) {
-        res.color = HOVER_HIGHLIGHT_COLOR
+        res.color = graphTheme.hoverHighlight
         res.zIndex = 1
       } else {
-        res.color = DIM_COLOR
+        res.color = graphTheme.dim
       }
     } else if (refs.hoveredNodeId) {
       const isFocus = nodeKey === refs.hoveredNodeId || graph.areNeighbors(nodeKey, refs.hoveredNodeId)
-      if (!isFocus) res.color = DIM_COLOR
+      if (!isFocus) res.color = graphTheme.dim
       else res.zIndex = 1
     }
 
     if (nodeKey === refs.selectedNodeId) {
-      res.color = SELECTED_COLOR
+      res.color = graphTheme.selected
       res.zIndex = 2
       res.highlighted = true
     }
@@ -75,7 +74,7 @@ export function createReducers(graph: Graph, refs: ReducerRefs) {
   }
 
   const edgeReducer = (edgeKey: string, data: Record<string, unknown>) => {
-    const res = { ...data }
+    const res: Record<string, unknown> = { ...data, color: graphTheme.edgeDefault }
     const [source, target] = graph.extremities(edgeKey)
     const sourceAttrs = graph.getNodeAttributes(source) as unknown as GraphNode
     const targetAttrs = graph.getNodeAttributes(target) as unknown as GraphNode
@@ -89,7 +88,7 @@ export function createReducers(graph: Graph, refs: ReducerRefs) {
     }
 
     if (refs.hoveredNodeId && source !== refs.hoveredNodeId && target !== refs.hoveredNodeId) {
-      res.color = DIM_COLOR
+      res.color = graphTheme.dim
     }
 
     return res

@@ -4,6 +4,7 @@ import Sigma from 'sigma'
 import { circular } from 'graphology-layout'
 import { graph as globalGraph } from './graphData'
 import { findNthNeighbors } from './neighbors'
+import { graphTheme } from './graphTheme'
 import { useAppStore } from '../store/appStore'
 
 const DEFAULT_DEPTH = 1
@@ -27,6 +28,7 @@ export function LocalGraphWidget() {
   const setSelectedNodeId = useAppStore((state) => state.setSelectedNodeId)
   const setActiveNodeId = useAppStore((state) => state.setActiveNodeId)
   const graphVersion = useAppStore((state) => state.graphVersion)
+  const themeVersion = useAppStore((state) => state.themeVersion)
 
   const focusId = selectedNodeId ?? activeNodeId
 
@@ -35,8 +37,8 @@ export function LocalGraphWidget() {
     const sigma = new Sigma(localGraphRef.current, containerRef.current, {
       renderLabels: true,
       labelRenderedSizeThreshold: 0,
-      defaultNodeColor: '#8aa2c8',
-      defaultEdgeColor: 'rgba(148, 163, 184, 0.35)',
+      defaultNodeColor: graphTheme.nodeDefault,
+      defaultEdgeColor: graphTheme.edgeDefault,
       minCameraRatio: 0.3,
       maxCameraRatio: 3,
     })
@@ -63,11 +65,11 @@ export function LocalGraphWidget() {
     const neighborhood = findNthNeighbors(globalGraph, focusId, depth)
     neighborhood.forEach((id) => {
       const attrs = globalGraph.getNodeAttributes(id)
-      local.addNode(id, { ...attrs, x: 0, y: 0 })
+      local.addNode(id, { ...attrs, x: 0, y: 0, color: graphTheme.nodeDefault })
     })
     globalGraph.forEachEdge((_edge, attrs, source, target) => {
       if (neighborhood.has(source) && neighborhood.has(target) && !local.hasEdge(source, target)) {
-        local.addEdge(source, target, attrs)
+        local.addEdge(source, target, { ...attrs, color: graphTheme.edgeDefault })
       }
     })
     circular.assign(local)
@@ -75,21 +77,23 @@ export function LocalGraphWidget() {
     if (local.hasNode(focusId)) {
       local.setNodeAttribute(focusId, 'x', 0)
       local.setNodeAttribute(focusId, 'y', 0)
-      local.setNodeAttribute(focusId, 'color', '#f5b942')
+      local.setNodeAttribute(focusId, 'color', graphTheme.selected)
     }
+    sigmaRef.current?.setSetting('defaultNodeColor', graphTheme.nodeDefault)
+    sigmaRef.current?.setSetting('defaultEdgeColor', graphTheme.edgeDefault)
     sigmaRef.current?.refresh()
-  }, [focusId, depth, graphVersion])
+  }, [focusId, depth, graphVersion, themeVersion])
 
   return (
-    <div className="pointer-events-auto flex w-64 flex-col overflow-hidden rounded-lg border border-white/10 bg-black/70 backdrop-blur">
-      <div className="flex items-center justify-between border-b border-white/10 px-2 py-1 text-[10px] uppercase tracking-wide text-white/50">
+    <div className="ascipio-panel pointer-events-auto flex w-64 flex-col overflow-hidden rounded-lg backdrop-blur">
+      <div className="ascipio-muted flex items-center justify-between border-b border-[var(--ascipio-border)] px-2 py-1 text-[10px] uppercase tracking-wide">
         <span>Local graph</span>
         <div className="flex gap-1">
           {[1, 2].map((d) => (
             <button
               key={d}
               onClick={() => setDepth(d)}
-              className={`rounded px-1.5 ${depth === d ? 'bg-white/20 text-white' : 'hover:bg-white/10'}`}
+              className={`ascipio-chip-hover rounded px-1.5 ${depth === d ? 'ascipio-chip' : ''}`}
             >
               {d} hop
             </button>
@@ -99,7 +103,7 @@ export function LocalGraphWidget() {
       <div className="relative h-40 w-full">
         <div ref={containerRef} className="absolute inset-0" />
         {!focusId && (
-          <div className="absolute inset-0 flex items-center justify-center px-4 text-center text-[11px] text-white/40">
+          <div className="ascipio-muted absolute inset-0 flex items-center justify-center px-4 text-center text-[11px]">
             Select a note to see its local graph
           </div>
         )}

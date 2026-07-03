@@ -64,12 +64,12 @@ export function DebugPanel({ handle }: { handle: GraphCanvasHandle | null }) {
   const withinBounds = observed ? observed.min >= MIN_RATIO && observed.max <= MAX_RATIO : null
 
   return (
-    <div className="pointer-events-auto flex flex-col gap-2 rounded-lg border border-white/10 bg-black/60 p-3 text-xs text-white backdrop-blur">
+    <div className="ascipio-panel pointer-events-auto flex flex-col gap-2 rounded-lg p-3 text-xs backdrop-blur">
       <div className="font-semibold">Camera fix demo</div>
       <button
         onClick={fireBurst}
         disabled={running}
-        className="rounded bg-blue-600 px-2 py-1 font-medium disabled:opacity-50"
+        className="ascipio-button-primary rounded px-2 py-1 font-medium disabled:opacity-50"
       >
         {running ? 'Firing follow burst…' : `Fire ${BURST_SIZE} rapid follow events`}
       </button>

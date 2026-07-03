@@ -1,0 +1,133 @@
+import { ThemeTokens } from '../protocol/schema'
+
+/**
+ * A small, hand-picked theme library for running org-ascipio without a live
+ * Emacs connection (or for overriding the synced theme). Deliberately kept
+ * small and curated rather than the old project's 138KB preset grab-bag --
+ * each of these feeds the exact same `applyTheme` pipeline a live Emacs
+ * theme push does, so there is only one theming code path in the app.
+ */
+export const THEME_PRESETS: Record<string, ThemeTokens> = {
+  midnight: {
+    mode: 'dark',
+    bg: '#0b0f17',
+    bgAlt: '#111826',
+    bgElevated: '#182236',
+    fg: '#e6ebf5',
+    fgAlt: '#a9b6cc',
+    fgMuted: '#6b7690',
+    border: '#26314a',
+    accent: {
+      red: '#ef5b5b',
+      orange: '#f5a742',
+      yellow: '#f5da42',
+      green: '#5bd67e',
+      cyan: '#4fd6d0',
+      blue: '#5b8def',
+      violet: '#a684f2',
+      magenta: '#e05bd0',
+    },
+  },
+  nord: {
+    mode: 'dark',
+    bg: '#2e3440',
+    bgAlt: '#3b4252',
+    bgElevated: '#434c5e',
+    fg: '#eceff4',
+    fgAlt: '#d8dee9',
+    fgMuted: '#7b88a1',
+    border: '#4c566a',
+    accent: {
+      red: '#bf616a',
+      orange: '#d08770',
+      yellow: '#ebcb8b',
+      green: '#a3be8c',
+      cyan: '#88c0d0',
+      blue: '#81a1c1',
+      violet: '#b48ead',
+      magenta: '#b48ead',
+    },
+  },
+  'solarized-dark': {
+    mode: 'dark',
+    bg: '#002b36',
+    bgAlt: '#073642',
+    bgElevated: '#0a4552',
+    fg: '#eee8d5',
+    fgAlt: '#93a1a1',
+    fgMuted: '#586e75',
+    border: '#0a4552',
+    accent: {
+      red: '#dc322f',
+      orange: '#cb4b16',
+      yellow: '#b58900',
+      green: '#859900',
+      cyan: '#2aa198',
+      blue: '#268bd2',
+      violet: '#6c71c4',
+      magenta: '#d33682',
+    },
+  },
+  'solarized-light': {
+    mode: 'light',
+    bg: '#fdf6e3',
+    bgAlt: '#eee8d5',
+    bgElevated: '#e4ddc4',
+    fg: '#073642',
+    fgAlt: '#586e75',
+    fgMuted: '#93a1a1',
+    border: '#d3cbb2',
+    accent: {
+      red: '#dc322f',
+      orange: '#cb4b16',
+      yellow: '#b58900',
+      green: '#859900',
+      cyan: '#2aa198',
+      blue: '#268bd2',
+      violet: '#6c71c4',
+      magenta: '#d33682',
+    },
+  },
+  gruvbox: {
+    mode: 'dark',
+    bg: '#282828',
+    bgAlt: '#32302f',
+    bgElevated: '#3c3836',
+    fg: '#ebdbb2',
+    fgAlt: '#d5c4a1',
+    fgMuted: '#a89984',
+    border: '#504945',
+    accent: {
+      red: '#fb4934',
+      orange: '#fe8019',
+      yellow: '#fabd2f',
+      green: '#b8bb26',
+      cyan: '#8ec07c',
+      blue: '#83a598',
+      violet: '#d3869b',
+      magenta: '#d3869b',
+    },
+  },
+  'rose-pine': {
+    mode: 'dark',
+    bg: '#191724',
+    bgAlt: '#1f1d2e',
+    bgElevated: '#26233a',
+    fg: '#e0def4',
+    fgAlt: '#908caa',
+    fgMuted: '#6e6a86',
+    border: '#403d52',
+    accent: {
+      red: '#eb6f92',
+      orange: '#ea9a97',
+      yellow: '#f6c177',
+      green: '#31748f',
+      cyan: '#9ccfd8',
+      blue: '#9ccfd8',
+      violet: '#c4a7e7',
+      magenta: '#c4a7e7',
+    },
+  },
+}
+
+export const DEFAULT_PRESET_ID = 'midnight'

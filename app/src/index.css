@@ -1,20 +1,30 @@
 @import 'tailwindcss';
 
 /*
- * Semantic theme tokens. In the target design (Phase 5) these are set live
- * from Emacs's `theme` websocket message (ThemeTokens) via
- * theme/applyTheme.ts, with a curated preset library as a fallback when no
- * Emacs connection is active. The defaults below are just a reasonable
- * dark palette so the app is usable before that pipeline exists.
+ * Semantic theme tokens, live-updated by theme/applyTheme.ts (from either a
+ * synced Emacs theme or a built-in preset, both feeding the exact same
+ * pipeline -- see docs/PROTOCOL.md ThemeTokens). Every color used by chrome
+ * components below resolves through these variables, and the graph itself
+ * reads the same values via graph/graphTheme.ts, so a theme change re-skins
+ * the whole app instantly with no reload. The defaults here just give the
+ * app a sensible look before applyTheme() runs for the first time.
  */
 :root {
   --ascipio-bg: #0b0f17;
   --ascipio-bg-alt: #111826;
   --ascipio-bg-elevated: #182236;
   --ascipio-fg: #e6ebf5;
-  --ascipio-fg-muted: #93a1b8;
+  --ascipio-fg-alt: #a9b6cc;
+  --ascipio-fg-muted: #6b7690;
   --ascipio-border: #26314a;
+  --ascipio-accent-red: #ef5b5b;
+  --ascipio-accent-orange: #f5a742;
+  --ascipio-accent-yellow: #f5da42;
+  --ascipio-accent-green: #5bd67e;
+  --ascipio-accent-cyan: #4fd6d0;
   --ascipio-accent-blue: #5b8def;
+  --ascipio-accent-violet: #a684f2;
+  --ascipio-accent-magenta: #e05bd0;
 }
 
 html,
@@ -24,4 +34,38 @@ body,
   margin: 0;
   background: var(--ascipio-bg);
   color: var(--ascipio-fg);
+}
+
+/*
+ * Shared chrome primitives. Every floating panel/button in views/ and ui/
+ * uses these instead of hardcoded bg-black/text-white Tailwind utilities,
+ * so they actually adopt whatever theme is active (previously they stayed
+ * dark-glass regardless of a light theme being synced -- a real visual bug,
+ * not just a stylistic choice).
+ */
+@layer components {
+  .ascipio-panel {
+    background-color: color-mix(in srgb, var(--ascipio-bg-elevated) 88%, transparent);
+    border: 1px solid var(--ascipio-border);
+    color: var(--ascipio-fg);
+  }
+  .ascipio-panel-solid {
+    background-color: var(--ascipio-bg-elevated);
+    border: 1px solid var(--ascipio-border);
+    color: var(--ascipio-fg);
+  }
+  .ascipio-chip {
+    background-color: color-mix(in srgb, var(--ascipio-fg) 12%, transparent);
+    color: var(--ascipio-fg-alt);
+  }
+  .ascipio-chip-hover:hover {
+    background-color: color-mix(in srgb, var(--ascipio-fg) 20%, transparent);
+  }
+  .ascipio-muted {
+    color: var(--ascipio-fg-muted);
+  }
+  .ascipio-button-primary {
+    background-color: var(--ascipio-accent-blue);
+    color: white;
+  }
 }

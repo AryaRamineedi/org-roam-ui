@@ -43,12 +43,22 @@ follow-mode bug. On top of that:
 - **Search**: client-side title/tag search with live graph highlighting.
 - **Filters**: tag include/exclude, hide-orphans, hide-completed-TODOs,
   applied live via Sigma's node/edge reducers.
+- **Live Emacs theme sync**: any Emacs theme (not just Doom themes) is
+  extracted from faces and pushed automatically on every theme change
+  (`enable-theme-functions` — no manual `M-x` needed, unlike the old
+  project) to re-skin the entire app — chrome panels *and* graph node/edge
+  colors — instantly, no reload. Six curated presets
+  (midnight/nord/solarized/gruvbox/rosé-pine) cover running without a live
+  Emacs connection. See `docs/VISUAL_ROADMAP.md`.
+- **Node color modes**: color the graph by tag (hashed to the active
+  theme's accent palette), by TODO state, or plain — a quick visual read on
+  vault structure or what's outstanding, without opening the agenda view.
 
-Not yet built: diffed (rather than full-resend) graph updates, live Emacs
-theme sync, citation/reference links, and the pluggable file/image link
-resolver — see `docs/PROTOCOL.md` for the wire-protocol-level detail on
-what's implemented vs. planned. Visual/theming polish is the next major
-phase (see the visual roadmap once it lands).
+Not yet built: diffed (rather than full-resend) graph updates,
+citation/reference links, and the pluggable file/image link resolver — see
+`docs/PROTOCOL.md` for the wire-protocol-level detail on what's implemented
+vs. planned. Further visual polish (typography, motion, richer org-content
+rendering) is tracked in `docs/VISUAL_ROADMAP.md`.
 
 ## Running it
 

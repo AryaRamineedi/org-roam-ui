@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { ConnectionStatus } from '../connection/client'
 import { ClientMessage } from '../protocol/messages'
 import { EmacsVariables, ThemeTokens } from '../protocol/schema'
+import { ColorMode } from '../graph/nodeColor'
 
 export type ViewMode = 'graph' | 'agenda'
 
@@ -44,6 +45,10 @@ interface AppState {
   theme: ThemeTokens | null
   setTheme: (theme: ThemeTokens) => void
 
+  /** Bumped whenever a new theme is applied, so the graph canvas knows to
+   *  re-render with new colors without triggering a full re-layout. */
+  themeVersion: number
+
   /** Set by useAscipioConnection once the client exists; lets any component
    *  dispatch client->server commands without prop-drilling the socket. */
   sendCommand: ((message: ClientMessage) => void) | null
@@ -57,6 +62,9 @@ interface AppState {
 
   searchQuery: string
   setSearchQuery: (query: string) => void
+
+  colorMode: ColorMode
+  setColorMode: (mode: ColorMode) => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -76,7 +84,8 @@ export const useAppStore = create<AppState>((set) => ({
   setVariables: (variables) => set({ variables }),
 
   theme: null,
-  setTheme: (theme) => set({ theme }),
+  setTheme: (theme) => set((state) => ({ theme, themeVersion: state.themeVersion + 1 })),
+  themeVersion: 0,
 
   sendCommand: null,
   setSendCommand: (send) => set({ sendCommand: send }),
@@ -89,4 +98,7 @@ export const useAppStore = create<AppState>((set) => ({
 
   searchQuery: '',
   setSearchQuery: (query) => set({ searchQuery: query }),
+
+  colorMode: 'tag',
+  setColorMode: (mode) => set({ colorMode: mode }),
 }))

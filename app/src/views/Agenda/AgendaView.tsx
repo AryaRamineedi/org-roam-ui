@@ -57,7 +57,7 @@ export function AgendaView() {
 
   if (groups.size === 0) {
     return (
-      <div className="flex h-full w-full items-center justify-center text-white/50">
+      <div className="ascipio-muted flex h-full w-full items-center justify-center">
         No TODO items found in this vault.
       </div>
     )
@@ -66,31 +66,28 @@ export function AgendaView() {
   return (
     <div className="flex h-full w-full gap-3 overflow-x-auto p-4">
       {Array.from(groups.entries()).map(([state, nodes]) => (
-        <div key={state} className="flex w-64 shrink-0 flex-col rounded-lg bg-white/5">
-          <div className="border-b border-white/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white/60">
+        <div key={state} className="ascipio-chip flex w-64 shrink-0 flex-col rounded-lg">
+          <div className="ascipio-muted border-b border-[var(--ascipio-border)] px-3 py-2 text-xs font-semibold uppercase tracking-wide">
             {state} ({nodes.length})
           </div>
           <div className="flex-1 space-y-2 overflow-y-auto p-2">
             {nodes.map((node) => (
-              <div
-                key={node.id}
-                className="rounded-md border border-white/10 bg-black/40 p-2 text-xs text-white"
-              >
+              <div key={node.id} className="ascipio-panel-solid rounded-md p-2 text-xs">
                 <button onClick={() => openInGraph(node.id)} className="block w-full text-left font-medium hover:underline">
                   {node.priority ? `[#${node.priority}] ` : ''}
                   {node.title}
                 </button>
-                <div className="mt-1 flex flex-wrap gap-1 text-white/50">
+                <div className="ascipio-muted mt-1 flex flex-wrap gap-1">
                   {node.deadline && (
-                    <span className="rounded bg-rose-500/20 px-1 py-0.5 text-rose-300">
+                    <span className="rounded bg-[var(--ascipio-accent-red)]/20 px-1 py-0.5 text-[var(--ascipio-accent-red)]">
                       due {node.deadline.slice(0, 10)}
                     </span>
                   )}
                   {node.scheduled && !node.deadline && (
-                    <span className="rounded bg-white/10 px-1 py-0.5">{node.scheduled.slice(0, 10)}</span>
+                    <span className="ascipio-chip rounded px-1 py-0.5">{node.scheduled.slice(0, 10)}</span>
                   )}
                   {node.tags.map((tag) => (
-                    <span key={tag} className="rounded bg-white/10 px-1 py-0.5">
+                    <span key={tag} className="ascipio-chip rounded px-1 py-0.5">
                       #{tag}
                     </span>
                   ))}

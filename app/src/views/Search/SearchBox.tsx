@@ -44,19 +44,19 @@ export function SearchBox() {
           if (e.key === 'Escape') setSearchQuery('')
         }}
         placeholder="Search notes and tags…"
-        className="w-full rounded-lg border border-white/10 bg-black/60 px-3 py-1.5 text-xs text-white placeholder-white/40 backdrop-blur focus:outline-none focus:ring-1 focus:ring-[var(--ascipio-accent-blue)]"
+        className="ascipio-panel w-full rounded-lg px-3 py-1.5 text-xs backdrop-blur placeholder:opacity-50 focus:outline-none focus:ring-1 focus:ring-[var(--ascipio-accent-blue)]"
       />
       {focused && results.length > 0 && (
-        <div className="absolute left-0 top-full z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-white/10 bg-black/90 text-xs text-white backdrop-blur">
+        <div className="ascipio-panel-solid absolute left-0 top-full z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-lg text-xs backdrop-blur">
           {results.map(({ id, node }) => (
             <button
               key={id}
               onMouseDown={() => goTo(id)}
-              className="block w-full truncate px-3 py-1.5 text-left hover:bg-white/10"
+              className="ascipio-chip-hover block w-full truncate px-3 py-1.5 text-left"
             >
               {node.title}
               {node.tags.length > 0 && (
-                <span className="ml-1.5 text-white/40">{node.tags.map((t) => `#${t}`).join(' ')}</span>
+                <span className="ascipio-muted ml-1.5">{node.tags.map((t) => `#${t}`).join(' ')}</span>
               )}
             </button>
           ))}

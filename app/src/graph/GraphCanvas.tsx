@@ -6,6 +6,7 @@ import { graph } from './graphData'
 import { CameraController } from './CameraController'
 import { createSigmaCameraController } from './sigmaCameraController'
 import { createReducers, ReducerRefs } from './graphReducers'
+import { graphTheme } from './graphTheme'
 import { useAppStore } from '../store/appStore'
 
 const LAYOUT_ITERATIONS = 150
@@ -40,6 +41,7 @@ export function GraphCanvas({
     selectedNodeId: null,
     filters: useAppStore.getState().filters,
     searchQuery: useAppStore.getState().searchQuery,
+    colorMode: useAppStore.getState().colorMode,
   })
 
   const graphVersion = useAppStore((state) => state.graphVersion)
@@ -47,6 +49,8 @@ export function GraphCanvas({
   const selectedNodeId = useAppStore((state) => state.selectedNodeId)
   const filters = useAppStore((state) => state.filters)
   const searchQuery = useAppStore((state) => state.searchQuery)
+  const themeVersion = useAppStore((state) => state.themeVersion)
+  const colorMode = useAppStore((state) => state.colorMode)
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -55,8 +59,8 @@ export function GraphCanvas({
     const sigma = new Sigma(graph, containerRef.current, {
       renderLabels: true,
       labelRenderedSizeThreshold: 6,
-      defaultNodeColor: '#8aa2c8',
-      defaultEdgeColor: 'rgba(148, 163, 184, 0.35)',
+      defaultNodeColor: graphTheme.nodeDefault,
+      defaultEdgeColor: graphTheme.edgeDefault,
       minCameraRatio: 0.05,
       maxCameraRatio: 8,
       nodeReducer,
@@ -131,6 +135,21 @@ export function GraphCanvas({
     refsRef.current.searchQuery = searchQuery
     sigmaRef.current?.refresh({ skipIndexation: true })
   }, [searchQuery])
+
+  useEffect(() => {
+    refsRef.current.colorMode = colorMode
+    sigmaRef.current?.refresh({ skipIndexation: true })
+  }, [colorMode])
+
+  // Theme changes recolor via the reducers above (no re-layout needed) --
+  // just a plain refresh, kept separate from the graphVersion effect so a
+  // theme switch never triggers a disruptive forceatlas2 re-layout.
+  useEffect(() => {
+    if (!sigmaRef.current) return
+    sigmaRef.current.setSetting('defaultNodeColor', graphTheme.nodeDefault)
+    sigmaRef.current.setSetting('defaultEdgeColor', graphTheme.edgeDefault)
+    sigmaRef.current.refresh({ skipIndexation: true })
+  }, [themeVersion])
 
   return <div ref={containerRef} className="h-full w-full bg-[var(--ascipio-bg,#0b0f17)]" />
 }

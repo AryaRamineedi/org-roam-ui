@@ -1,6 +1,8 @@
 import { useAppStore } from '../../store/appStore'
 import { SearchBox } from '../Search/SearchBox'
 import { FilterPanel } from '../Filters/FilterPanel'
+import { ThemePicker } from '../Settings/ThemePicker'
+import { ColorModeToggle } from '../Settings/ColorModeToggle'
 import { runtime } from '../../runtime/capabilities'
 
 const STATUS_LABEL: Record<string, string> = {
@@ -17,17 +19,17 @@ export function TopBar() {
 
   return (
     <div className="pointer-events-auto flex items-center gap-2">
-      <div className="rounded-lg border border-white/10 bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur">
+      <div className="ascipio-panel rounded-lg px-3 py-1.5 text-xs backdrop-blur">
         org-ascipio — {STATUS_LABEL[status] ?? status}
-        {runtime.isTauri && <span className="ml-2 text-white/50">(standalone)</span>}
+        {runtime.isTauri && <span className="ascipio-muted ml-2">(standalone)</span>}
       </div>
 
-      <div className="flex overflow-hidden rounded-lg border border-white/10 bg-black/60 text-xs text-white backdrop-blur">
+      <div className="ascipio-panel flex overflow-hidden rounded-lg text-xs backdrop-blur">
         {(['graph', 'agenda'] as const).map((mode) => (
           <button
             key={mode}
             onClick={() => setViewMode(mode)}
-            className={`px-3 py-1.5 capitalize ${viewMode === mode ? 'bg-white/20' : 'hover:bg-white/10'}`}
+            className={`ascipio-chip-hover px-3 py-1.5 capitalize ${viewMode === mode ? 'ascipio-chip' : ''}`}
           >
             {mode}
           </button>
@@ -35,7 +37,9 @@ export function TopBar() {
       </div>
 
       <SearchBox />
+      <ColorModeToggle />
       <FilterPanel />
+      <ThemePicker />
     </div>
   )
 }

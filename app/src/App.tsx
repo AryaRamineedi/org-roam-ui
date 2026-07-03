@@ -48,7 +48,7 @@ export function App() {
           {status !== 'open' && (
             <button
               onClick={loadDemoGraph}
-              className="pointer-events-auto rounded-lg border border-white/10 bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur hover:bg-black/80"
+              className="ascipio-panel ascipio-chip-hover pointer-events-auto rounded-lg px-3 py-1.5 text-xs backdrop-blur"
             >
               Load demo graph
             </button>

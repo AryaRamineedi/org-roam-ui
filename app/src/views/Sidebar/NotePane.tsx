@@ -62,55 +62,53 @@ export function NotePane() {
   }
 
   return (
-    <div className="pointer-events-auto flex h-full w-full flex-col overflow-hidden rounded-lg border border-white/10 bg-black/80 text-sm text-white backdrop-blur">
-      <div className="flex items-start justify-between gap-2 border-b border-white/10 p-3">
+    <div className="ascipio-panel-solid pointer-events-auto flex h-full w-full flex-col overflow-hidden rounded-lg text-sm backdrop-blur">
+      <div className="flex items-start justify-between gap-2 border-b border-[var(--ascipio-border)] p-3">
         <div className="min-w-0">
           <div className="truncate text-base font-semibold">{node.title}</div>
-          <div className="truncate text-xs text-white/50">{node.file}</div>
+          <div className="ascipio-muted truncate text-xs">{node.file}</div>
         </div>
         <button
           onClick={() => setSelectedNodeId(null)}
-          className="shrink-0 rounded px-1.5 py-0.5 text-white/60 hover:bg-white/10 hover:text-white"
+          className="ascipio-chip-hover shrink-0 rounded px-1.5 py-0.5"
           aria-label="Close"
         >
           ✕
         </button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-1 border-b border-white/10 p-2 text-xs">
+      <div className="flex flex-wrap items-center gap-1 border-b border-[var(--ascipio-border)] p-2 text-xs">
         {node.todo && (
-          <span className="rounded bg-amber-500/20 px-1.5 py-0.5 font-medium text-amber-300">
+          <span className="rounded bg-[var(--ascipio-accent-orange)]/20 px-1.5 py-0.5 font-medium text-[var(--ascipio-accent-orange)]">
             {node.todo}
             {node.priority ? ` [#${node.priority}]` : ''}
           </span>
         )}
         {node.scheduled && (
-          <span className="rounded bg-white/10 px-1.5 py-0.5 text-white/70">
-            scheduled {node.scheduled.slice(0, 10)}
-          </span>
+          <span className="ascipio-chip rounded px-1.5 py-0.5">scheduled {node.scheduled.slice(0, 10)}</span>
         )}
         {node.deadline && (
-          <span className="rounded bg-rose-500/20 px-1.5 py-0.5 text-rose-300">
+          <span className="rounded bg-[var(--ascipio-accent-red)]/20 px-1.5 py-0.5 text-[var(--ascipio-accent-red)]">
             deadline {node.deadline.slice(0, 10)}
           </span>
         )}
         {node.tags.map((tag) => (
-          <span key={tag} className="rounded bg-white/10 px-1.5 py-0.5 text-white/70">
+          <span key={tag} className="ascipio-chip rounded px-1.5 py-0.5">
             #{tag}
           </span>
         ))}
         <button
           onClick={() => sendCommand?.({ command: 'open', data: { id: node.id } })}
           disabled={!sendCommand}
-          className="ml-auto rounded bg-[var(--ascipio-accent-blue)] px-2 py-0.5 font-medium text-white disabled:opacity-40"
+          className="ascipio-button-primary ml-auto rounded px-2 py-0.5 font-medium disabled:opacity-40"
         >
           Open in Emacs
         </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-3">
-        {error && <div className="text-rose-300">{error}</div>}
-        {!error && text === null && <div className="text-white/50">Loading…</div>}
+        {error && <div className="text-[var(--ascipio-accent-red)]">{error}</div>}
+        {!error && text === null && <div className="ascipio-muted">Loading…</div>}
         {!error &&
           text !== null &&
           renderOrgText(text, {
@@ -139,15 +137,15 @@ function LinkSection({
   onNavigate: (id: string) => void
 }) {
   return (
-    <div className="max-h-32 shrink-0 overflow-y-auto border-t border-white/10 p-2">
-      <div className="mb-1 px-1 text-xs font-semibold uppercase tracking-wide text-white/40">
+    <div className="max-h-32 shrink-0 overflow-y-auto border-t border-[var(--ascipio-border)] p-2">
+      <div className="ascipio-muted mb-1 px-1 text-xs font-semibold uppercase tracking-wide">
         {title} ({ids.length})
       </div>
       {ids.map((id) => (
         <button
           key={id}
           onClick={() => onNavigate(id)}
-          className="block w-full truncate rounded px-1 py-0.5 text-left text-white/80 hover:bg-white/10"
+          className="ascipio-chip-hover block w-full truncate rounded px-1 py-0.5 text-left"
         >
           {titleOf(id)}
         </button>

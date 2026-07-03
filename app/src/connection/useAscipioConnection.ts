@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { AscipioClient } from './client'
 import { applyPatch, applySnapshot } from '../graph/graphData'
+import { applyTheme } from '../theme/applyTheme'
 import { useAppStore } from '../store/appStore'
 
 /**
@@ -35,6 +36,7 @@ export function useAscipioConnection(): void {
             setVariables(message.data)
             return
           case 'theme':
+            applyTheme(message.data)
             setTheme(message.data)
             return
           case 'command':
