@@ -35,8 +35,79 @@ and the project's architecture plan for the full roadmap.
 
 ### 1. Emacs backend (required for all three modes)
 
-Add this repository to your `load-path` (or install it via `straight.el` /
-`package-vc-install` once published), then:
+org-ascipio is a single file, `org-ascipio.el`, with no build step — every
+install method below just needs Emacs to load it.
+
+#### Doom Emacs
+
+Make sure the `org` module's `+roam2` flag is enabled in `init.el` (org-ascipio
+depends on `org-roam`, which Doom already manages):
+
+```elisp
+;; init.el
+(org +roam2)
+```
+
+Add the package in `packages.el` (`~/.doom.d/packages.el` or
+`~/.config/doom/packages.el`):
+
+```elisp
+;; packages.el
+(package! org-ascipio
+  :recipe (:host github
+           :repo "AryaRamineedi/org-roam-ui"
+           :branch "claude/org-ascipio-ui-redesign-oqnlvp" ; drop this line once merged to main
+           :files (:defaults "dist")))
+```
+
+`:files (:defaults "dist")` tells straight.el (which Doom uses under the
+hood) to pull in `org-ascipio.el` plus the committed `dist/` build, and skip
+the unrelated `app/`, `src-tauri/`, and `legacy/` directories in this repo.
+
+Then configure it in `config.el` (`~/.doom.d/config.el` or
+`~/.config/doom/config.el`):
+
+```elisp
+;; config.el
+(use-package! org-ascipio
+  :after org-roam
+  :config
+  ;; Only needed if org-roam-directory isn't already set elsewhere.
+  ;; (setq org-roam-directory "~/path/to/your/org-roam-vault")
+
+  ;; Optional: embed org-ascipio in an Emacs buffer instead of opening an
+  ;; external browser, on Emacs builds compiled with xwidget support
+  ;; (best-effort for now, see "Inside Doom via xwidget-webkit" below):
+  ;; (setq org-ascipio-browser-function #'xwidget-webkit-browse-url)
+  )
+
+;; Optional leader keybindings
+(map! :leader
+      :desc "Toggle org-ascipio" "n r u" #'org-ascipio-mode
+      :desc "Open org-ascipio"   "n r U" #'org-ascipio-open)
+```
+
+Run `doom sync` (or `doom sync -u` the first time), restart/reload Doom, then
+`M-x org-ascipio-mode`.
+
+#### Other Emacs (straight.el, `package-vc-install`, or manual)
+
+```elisp
+;; straight.el, without use-package
+(straight-use-package
+ '(org-ascipio :type git :host github :repo "AryaRamineedi/org-roam-ui"
+               :branch "claude/org-ascipio-ui-redesign-oqnlvp"
+               :files (:defaults "dist")))
+
+;; or, Emacs 29+'s built-in package-vc.el
+;; M-x package-vc-install RET https://github.com/AryaRamineedi/org-roam-ui RET
+
+;; or, manually
+;; git clone https://github.com/AryaRamineedi/org-roam-ui ~/.emacs.d/site-lisp/org-ascipio
+;; (add-to-list 'load-path "~/.emacs.d/site-lisp/org-ascipio")
+```
+
+Then, regardless of install method:
 
 ```elisp
 (require 'org-ascipio)
@@ -49,14 +120,30 @@ This starts an HTTP server on `localhost:35901` (serving the committed
 data). By default it also opens your browser to the app
 (`org-ascipio-open-on-start`).
 
-### 2a. Browser / xwidget-webkit
+### 2a. Browser
 
 With `org-ascipio-mode` enabled, either open `http://localhost:35901` in any
-browser, or run `M-x org-ascipio-open` (customize
-`org-ascipio-browser-function` to `xwidget-webkit-browse-url` to embed it in
-an Emacs buffer on xwidget-enabled builds).
+browser (Firefox, etc.), or run `M-x org-ascipio-open`.
 
-### 2b. Standalone (Tauri)
+### 2b. Inside Doom via xwidget-webkit
+
+Requires an Emacs build compiled with xwidget support (`emacs --version`
+won't show this directly; check with `(featurep 'xwidget-internal)` — Doom
+itself doesn't require xwidget, it depends on how your Emacs binary was
+built/packaged). If available:
+
+```elisp
+;; config.el
+(after! org-ascipio
+  (setq org-ascipio-browser-function #'xwidget-webkit-browse-url))
+```
+
+Then `M-x org-ascipio-open` embeds the app in an Emacs buffer instead of an
+external browser. This is best-effort for now — there's no dedicated
+xwidget buffer chrome/keybindings yet, and xwidget-webkit's bundled WebKit
+can lag behind a real browser in feature support.
+
+### 2c. Standalone (Tauri)
 
 ```sh
 cd src-tauri
@@ -95,12 +182,12 @@ zoom.
 ## Repository layout
 
 ```
-org-ascipio.el, org-ascipio-*.el   Emacs package (entrypoint, server, DB queries, follow-mode)
-dist/                               Committed production frontend build (served by Emacs + Tauri)
-app/                                 Frontend source (Vite + React + TS + Sigma.js) — builds into dist/
-src-tauri/                           Standalone desktop shell (Tauri)
-docs/PROTOCOL.md                    Authoritative Emacs <-> frontend wire protocol
-legacy/                              The original org-roam-ui project, kept as reference only
+org-ascipio.el       The entire Emacs package: entrypoint, HTTP+websocket server, DB queries, follow-mode
+dist/                 Committed production frontend build (served by Emacs + Tauri)
+app/                   Frontend source (Vite + React + TS + Sigma.js) — builds into dist/
+src-tauri/             Standalone desktop shell (Tauri)
+docs/PROTOCOL.md      Authoritative Emacs <-> frontend wire protocol
+legacy/                The original org-roam-ui project, kept as reference only
 ```
 
 ## Why this exists

@@ -1,8 +1,8 @@
 # org-ascipio wire protocol (v1)
 
 This is the authoritative contract between the Emacs backend
-(`org-ascipio-server.el`, `org-ascipio-db.el`) and the frontend
-(`app/src/protocol/`). The two are not code-generated from a shared source —
+(`org-ascipio.el`, a single file) and the frontend (`app/src/protocol/`).
+The two are not code-generated from a shared source —
 the Elisp side is written by hand against this document, and the TypeScript
 side is enforced at runtime by the zod schemas in `app/src/protocol/schema.ts`
 and `app/src/protocol/messages.ts`. **Keep this file in sync with both by
@@ -38,10 +38,10 @@ Client → server messages: `{ "command": "<command>", "data": <payload> }`.
 | `type` | `data` shape | Status |
 |---|---|---|
 | `graph:init` | `GraphSnapshot` | Implemented. Sent once per client on connect, and again (full resend) after every `after-save-hook` on an org-roam buffer. |
-| `graph:patch` | `GraphPatch` | Schema defined, not yet sent — diffed updates are a documented fast-follow (`org-ascipio-diff.el`, not yet written) replacing the current full-resend-on-save behavior. |
+| `graph:patch` | `GraphPatch` | Schema defined, not yet sent — diffed updates are a documented fast-follow replacing the current full-resend-on-save behavior. |
 | `variables` | `EmacsVariables` | Schema defined, not yet sent. |
-| `theme` | `ThemeTokens` | Schema defined, not yet sent — theme auto-sync is a later phase (`org-ascipio-theme.el`, not yet written). |
-| `command` | `{ commandName: 'follow' \| 'local' \| 'zoom', id: string, ... }` | `follow` is implemented (`org-ascipio-follow.el`); `local`/`zoom` schemas are defined but not yet sent by anything. |
+| `theme` | `ThemeTokens` | Schema defined, not yet sent — theme auto-sync is a later phase. |
+| `command` | `{ commandName: 'follow' \| 'local' \| 'zoom', id: string, ... }` | `follow` is implemented; `local`/`zoom` schemas are defined but not yet sent by anything. |
 | `error` | `{ message: string }` | Schema defined, reserved for future use. |
 
 ### `GraphSnapshot`
@@ -67,8 +67,7 @@ interface GraphLink { source: string; target: string; type: LinkType }
 interface GraphSnapshot { nodes: GraphNode[]; links: GraphLink[]; tags: string[] }
 ```
 
-Note: only `id`-type links are populated by `org-ascipio-db.el` today.
-Citation/reference link support (`cite`/`ref`, requiring org-roam-bibtex
+Note: only `id`-type links are populated today. Citation/reference link support (`cite`/`ref`, requiring org-roam-bibtex
 integration) and client-synthesized `parent`/`heading` links are schema'd
 for forward compatibility but not implemented — a documented gap, not an
 oversight.
