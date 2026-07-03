@@ -27,9 +27,11 @@
 ;; (`org-roam-ui--get-nodes'), which only selected
 ;; [id file title level pos olp properties tags] even though org-roam's
 ;; `nodes' table has always had `todo', `priority', `scheduled', and
-;; `deadline' columns -- those are pulled here so a future task/agenda view
-;; has real data to work with, and today's graph payload already carries
-;; them for future UI use. Backlinks are precomputed here (dest -> [source
+;; `deadline' columns -- those are pulled here so the graph itself can
+;; surface task metadata (the real agenda view is a separate, more
+;; authoritative pass-through to `org-agenda' -- see the Agenda section
+;; below -- these DB columns are just for coloring/labeling graph nodes).
+;; Backlinks are precomputed here (dest -> [source
 ;; ids]) rather than left for the frontend to derive from the flat links
 ;; array, which is what the old project did on every graph update.
 ;;
@@ -91,6 +93,88 @@ org-ascipio inside an Emacs buffer, on Emacs builds with xwidget support."
   "Idle delay before pushing a `follow' command after point moves."
   :group 'org-ascipio
   :type 'number)
+
+;;;; Default frontend settings
+;;
+;; These are pushed to every client on connect as the `config:defaults'
+;; message and become the frontend's initial physics/view/color settings
+;; (see docs/PROTOCOL.md). The web UI's "export as elisp" feature
+;; (Settings panel) generates `setq' forms for exactly these variables, so
+;; configuring the app in the browser and exporting it back into your init
+;; file is a real round trip, not a disconnected cosmetic snippet: the
+;; values you export are read back by this same code on the next connect.
+
+(defcustom org-ascipio-default-physics-enabled t
+  "Whether the graph's force simulation runs live by default.
+When nil, the frontend still lays the graph out once (so it never renders
+as an unreadable scattered mess) but doesn't keep animating it."
+  :group 'org-ascipio
+  :type 'boolean)
+
+(defcustom org-ascipio-default-physics-charge -120
+  "Default node repulsion strength (more negative = nodes push apart harder)."
+  :group 'org-ascipio
+  :type 'number)
+
+(defcustom org-ascipio-default-physics-link-distance 90
+  "Default target distance between linked nodes."
+  :group 'org-ascipio
+  :type 'number)
+
+(defcustom org-ascipio-default-physics-link-strength 0.4
+  "Default strength (0-1) pulling linked nodes toward `link-distance'."
+  :group 'org-ascipio
+  :type 'number)
+
+(defcustom org-ascipio-default-physics-centering 0.05
+  "Default pull toward the canvas center; 0 disables it (\"gravity off\")."
+  :group 'org-ascipio
+  :type 'number)
+
+(defcustom org-ascipio-default-physics-collide-radius 10
+  "Default minimum separation between node centers; 0 disables it."
+  :group 'org-ascipio
+  :type 'number)
+
+(defcustom org-ascipio-default-physics-alpha-decay 0.02
+  "Default simulation cooling rate -- higher settles faster."
+  :group 'org-ascipio
+  :type 'number)
+
+(defcustom org-ascipio-default-physics-velocity-decay 0.35
+  "Default per-tick friction (0-1) applied to node velocity."
+  :group 'org-ascipio
+  :type 'number)
+
+(defcustom org-ascipio-default-color-mode "tag"
+  "Default node coloring mode: \"tag\", \"todo\", or \"plain\"."
+  :group 'org-ascipio
+  :type '(choice (const "tag") (const "todo") (const "plain")))
+
+(defcustom org-ascipio-default-graph-view-mode "global"
+  "Default graph view: \"global\" (whole graph) or \"local\" (focused node's
+neighborhood only, filling the main canvas)."
+  :group 'org-ascipio
+  :type '(choice (const "global") (const "local")))
+
+(defcustom org-ascipio-default-local-widget-enabled t
+  "Whether the always-visible local-graph corner widget shows by default."
+  :group 'org-ascipio
+  :type 'boolean)
+
+(defun org-ascipio--default-config ()
+  "Build the `config:defaults' payload from the `org-ascipio-default-*' variables."
+  `((physics . ((enabled . ,(if org-ascipio-default-physics-enabled t json-false))
+                (chargeStrength . ,org-ascipio-default-physics-charge)
+                (linkDistance . ,org-ascipio-default-physics-link-distance)
+                (linkStrength . ,org-ascipio-default-physics-link-strength)
+                (centeringStrength . ,org-ascipio-default-physics-centering)
+                (collideRadius . ,org-ascipio-default-physics-collide-radius)
+                (alphaDecay . ,org-ascipio-default-physics-alpha-decay)
+                (velocityDecay . ,org-ascipio-default-physics-velocity-decay)))
+    (colorMode . ,org-ascipio-default-color-mode)
+    (graphViewMode . ,org-ascipio-default-graph-view-mode)
+    (localGraphWidgetEnabled . ,(if org-ascipio-default-local-widget-enabled t json-false))))
 
 (defvar org-ascipio--ws-server nil
   "The websocket server process for org-ascipio.")
@@ -244,6 +328,8 @@ the whole buffer; heading nodes are narrowed to just that subtree."
   (push ws org-ascipio--ws-clients)
   (org-ascipio-server--send-graph-init ws)
   (org-ascipio-server--send ws "theme" (org-ascipio-theme-tokens))
+  (org-ascipio-server--send ws "agenda:views" `((views . ,(org-ascipio-agenda-available-views))))
+  (org-ascipio-server--send ws "config:defaults" (org-ascipio--default-config))
   (when org-ascipio-follow
     (org-ascipio-follow-mode 1))
   (message "[org-ascipio] client connected"))
@@ -253,17 +339,25 @@ the whole buffer; heading nodes are narrowed to just that subtree."
   (setq org-ascipio--ws-clients (delq ws org-ascipio--ws-clients))
   (message "[org-ascipio] client disconnected"))
 
+(defun org-ascipio-server--open-file-pos (file pos)
+  "Open FILE in Emacs at POS, splitting the window (shared by node/agenda opens)."
+  (let ((buf (find-file-noselect file)))
+    (unless (> (length (window-list)) 1)
+      (split-window-horizontally))
+    (other-window 1)
+    (set-window-buffer (selected-window) buf)
+    (when pos (goto-char pos))))
+
 (defun org-ascipio-server--handle-open (data)
-  "Open the node referenced by DATA's `id' in Emacs, splitting the window."
-  (when-let* ((id (alist-get 'id data))
-              (node (org-roam-node-from-id id)))
-    (let* ((pos (org-roam-node-point node))
-           (buf (find-file-noselect (org-roam-node-file node))))
-      (unless (> (length (window-list)) 1)
-        (split-window-horizontally))
-      (other-window 1)
-      (set-window-buffer (selected-window) buf)
-      (goto-char pos))))
+  "Open the location referenced by DATA in Emacs, splitting the window.
+DATA is either `{id}' (an org-roam node) or `{file, pos}' (a plain agenda
+entry, which may not have -- and does not need -- an org-roam id)."
+  (cond
+   ((alist-get 'id data)
+    (when-let ((node (org-roam-node-from-id (alist-get 'id data))))
+      (org-ascipio-server--open-file-pos (org-roam-node-file node) (org-roam-node-point node))))
+   ((alist-get 'file data)
+    (org-ascipio-server--open-file-pos (alist-get 'file data) (alist-get 'pos data)))))
 
 (defun org-ascipio-server--handle-delete (data)
   "Delete the file referenced by DATA and resync, then push a fresh snapshot."
@@ -292,6 +386,7 @@ the whole buffer; heading nodes are narrowed to just that subtree."
       ("open" (org-ascipio-server--handle-open data))
       ("delete" (org-ascipio-server--handle-delete data))
       ("create" (org-ascipio-server--handle-create data))
+      ("agenda:run" (org-ascipio-server--handle-agenda-run data))
       (`nil nil)
       (_ (message "[org-ascipio] unknown client command: %s" command)))))
 
@@ -343,6 +438,113 @@ commentary above and docs/PROTOCOL.md for the planned `graph:patch' diffing."
     (setq org-ascipio--ws-server nil))
   (setq org-ascipio--ws-clients nil)
   (httpd-stop))
+
+
+;;;; Agenda: a thin pass-through to Emacs's own org-agenda, not a
+;;;; reimplementation of it
+
+;; The frontend does not compute schedules, matches, or sorting itself --
+;; every view (including any the user has defined in
+;; `org-agenda-custom-commands') is dispatched straight to `org-agenda',
+;; and the resulting agenda buffer is captured line-by-line (text plus the
+;; `org-hd-marker'/`todo-state'/`tags'/`priority' text properties org-agenda
+;; already attaches to each entry line) and shipped to the frontend as
+;; plain data. This is deliberate: a client-side reimplementation of
+;; scheduling/matching logic would only ever support a subset of what real
+;; org-agenda does (repeaters, habits, custom skip functions, per-user
+;; `org-agenda-custom-commands', etc.), so instead of shipping a
+;; half-complete agenda, org-ascipio does not compute agenda semantics at
+;; all -- it only asks Emacs to and displays the answer.
+
+(require 'org-agenda)
+
+(defun org-ascipio-agenda-available-views ()
+  "Return the agenda views selectable from the frontend.
+Always includes the global TODO list (`t') and the day/week agenda (`a');
+everything else comes directly from the user's own
+`org-agenda-custom-commands' -- these need no interactive input (their
+match/settings are already baked into the command definition), unlike the
+built-in `m'/`s' single-key commands which normally prompt for a match
+string, so those two are intentionally not offered here."
+  (vconcat
+   (append
+    '(((key . "a") (description . "Agenda (day/week)"))
+      ((key . "t") (description . "Global TODO list")))
+    (mapcar
+     (lambda (cmd) `((key . ,(format "%s" (car cmd)))
+                      (description . ,(or (nth 1 cmd) (format "%s" (car cmd))))))
+     ;; Only single-key top-level commands are offered -- prefix-key
+     ;; sub-menus (a cons whose second element is a string naming a
+     ;; sub-menu, not a search type) aren't directly dispatchable the same
+     ;; way and are skipped.
+     (seq-filter (lambda (cmd) (and (nth 2 cmd) (not (stringp (nth 2 cmd)))))
+                 org-agenda-custom-commands)))))
+
+(defun org-ascipio-agenda--line-tags (pos)
+  "Return the tags text property at POS as a list of plain strings."
+  (seq-map (lambda (tag) (substring-no-properties tag)) (or (get-text-property pos 'tags) nil)))
+
+(defun org-ascipio-agenda--marker-id (marker)
+  "Return the org-id at MARKER's buffer position, if any."
+  (when (and marker (marker-buffer marker))
+    (with-current-buffer (marker-buffer marker)
+      (save-excursion
+        (goto-char marker)
+        (org-id-get)))))
+
+(defun org-ascipio-agenda--line-priority (text)
+  "Extract a human `[#A]'-style priority letter from agenda line TEXT, if any.
+The `priority' text property org-agenda sets is a composite sort key (not
+a character code), so it's not meaningful to decode directly -- the
+priority cookie in the rendered text itself is the reliable source."
+  (when (string-match "\\[#\\([A-Za-z0-9]+\\)\\]" text)
+    (match-string 1 text)))
+
+(defun org-ascipio-agenda--capture-buffer ()
+  "Capture the current `org-agenda' buffer as a list of AgendaLine alists."
+  (let (lines)
+    (save-excursion
+      (goto-char (point-min))
+      (while (not (eobp))
+        (let* ((line-start (point))
+               (text (buffer-substring-no-properties line-start (line-end-position)))
+               (marker (or (get-text-property line-start 'org-hd-marker)
+                           (get-text-property line-start 'org-marker))))
+          (unless (string-empty-p (string-trim text))
+            (push
+             `((text . ,text)
+               (isHeader . ,(if marker json-false t))
+               (todo . ,(get-text-property line-start 'todo-state))
+               (priority . ,(org-ascipio-agenda--line-priority text))
+               (tags . ,(vconcat (org-ascipio-agenda--line-tags line-start)))
+               (file . ,(when marker (buffer-file-name (marker-buffer marker))))
+               (pos . ,(when marker (marker-position marker)))
+               (id . ,(org-ascipio-agenda--marker-id marker)))
+             lines)))
+        (forward-line 1)))
+    (nreverse lines)))
+
+(defun org-ascipio-agenda-run (key)
+  "Run the org-agenda view KEY and return its content as AgendaLine alists.
+Builds the real `org-agenda' buffer (via the user's actual configuration)
+in a way that avoids disturbing the current window layout, then tears it
+back down immediately after capturing it."
+  (save-window-excursion
+    (save-excursion
+      (org-agenda nil key)
+      (unwind-protect
+          (with-current-buffer (get-buffer org-agenda-buffer-name)
+            (org-ascipio-agenda--capture-buffer))
+        (when (get-buffer org-agenda-buffer-name)
+          (with-current-buffer org-agenda-buffer-name
+            (org-agenda-quit)))))))
+
+(defun org-ascipio-server--handle-agenda-run (data)
+  "Run the agenda view named in DATA and broadcast the result."
+  (when-let ((key (alist-get 'key data)))
+    (org-ascipio-server-broadcast
+     "agenda:result"
+     `((key . ,key) (lines . ,(vconcat (org-ascipio-agenda-run key)))))))
 
 
 ;;;; Theme sync: mirror the current Emacs theme into the web UI

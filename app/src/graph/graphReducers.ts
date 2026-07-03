@@ -25,6 +25,10 @@ export interface ReducerRefs {
   /** Lowercased search query; empty string means "no active search". */
   searchQuery: string
   colorMode: ColorMode
+  /** Non-null in "local graph as main view" mode: only these node ids are
+   *  shown, and the physics engine (GraphCanvas) simulates only this
+   *  subset too, so hidden nodes don't silently warp the visible layout. */
+  localScope: Set<string> | null
 }
 
 function matchesSearch(node: GraphNode, query: string): boolean {
@@ -45,6 +49,10 @@ export function createReducers(graph: Graph, refs: ReducerRefs) {
     const res: Record<string, unknown> = { ...data, color: colorForNode(node, refs.colorMode) }
     const degree = graph.degree(nodeKey)
 
+    if (refs.localScope && !refs.localScope.has(nodeKey)) {
+      res.hidden = true
+      return res
+    }
     if (!isNodeVisible(node, degree, refs.filters)) {
       res.hidden = true
       return res
@@ -79,6 +87,10 @@ export function createReducers(graph: Graph, refs: ReducerRefs) {
     const sourceAttrs = graph.getNodeAttributes(source) as unknown as GraphNode
     const targetAttrs = graph.getNodeAttributes(target) as unknown as GraphNode
 
+    if (refs.localScope && (!refs.localScope.has(source) || !refs.localScope.has(target))) {
+      res.hidden = true
+      return res
+    }
     if (
       !isNodeVisible(sourceAttrs, graph.degree(source), refs.filters) ||
       !isNodeVisible(targetAttrs, graph.degree(target), refs.filters)

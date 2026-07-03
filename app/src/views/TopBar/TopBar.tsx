@@ -1,9 +1,9 @@
+import { useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { SearchBox } from '../Search/SearchBox'
-import { FilterPanel } from '../Filters/FilterPanel'
-import { ThemePicker } from '../Settings/ThemePicker'
-import { ColorModeToggle } from '../Settings/ColorModeToggle'
+import { SettingsPanel } from '../Settings/SettingsPanel'
 import { runtime } from '../../runtime/capabilities'
+import type { GraphCanvasHandle } from '../../graph/GraphCanvas'
 
 const STATUS_LABEL: Record<string, string> = {
   connecting: 'Connecting to Emacs…',
@@ -12,10 +12,11 @@ const STATUS_LABEL: Record<string, string> = {
   closed: 'Disconnected',
 }
 
-export function TopBar() {
+export function TopBar({ graphHandle }: { graphHandle: GraphCanvasHandle | null }) {
   const status = useAppStore((state) => state.connectionStatus)
   const viewMode = useAppStore((state) => state.viewMode)
   const setViewMode = useAppStore((state) => state.setViewMode)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   return (
     <div className="pointer-events-auto flex items-center gap-2">
@@ -37,9 +38,15 @@ export function TopBar() {
       </div>
 
       <SearchBox />
-      <ColorModeToggle />
-      <FilterPanel />
-      <ThemePicker />
+
+      <button
+        onClick={() => setSettingsOpen(true)}
+        className="ascipio-panel ascipio-chip-hover rounded-lg px-3 py-1.5 text-xs backdrop-blur"
+        aria-label="Settings"
+      >
+        ⚙ Settings
+      </button>
+      {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} graphHandle={graphHandle} />}
     </div>
   )
 }

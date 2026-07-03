@@ -1,15 +1,18 @@
 import { useEffect, useRef } from 'react'
 import Sigma from 'sigma'
-import { random } from 'graphology-layout'
-import forceAtlas2 from 'graphology-layout-forceatlas2'
 import { graph } from './graphData'
 import { CameraController } from './CameraController'
 import { createSigmaCameraController } from './sigmaCameraController'
 import { createReducers, ReducerRefs } from './graphReducers'
 import { graphTheme } from './graphTheme'
+import { GraphPhysicsEngine } from './physics'
+import { findNthNeighbors } from './neighbors'
 import { useAppStore } from '../store/appStore'
+import { useSettingsStore } from '../store/settingsStore'
 
-const LAYOUT_ITERATIONS = 150
+const LOCAL_VIEW_DEPTH = 2
+/** Pixels of movement before a node press counts as a drag, not a click. */
+const DRAG_THRESHOLD = 3
 
 export interface GraphCanvasHandle {
   cameraController: CameraController | null
@@ -18,15 +21,19 @@ export interface GraphCanvasHandle {
 
 /**
  * The global graph view: a WebGL Sigma canvas over the graphology `graph`
- * singleton (graph/graphData.ts). Camera motion is exclusively driven
- * through CameraController (graph/CameraController.ts) — nothing else in
- * this component is allowed to touch the Sigma camera directly, which is
- * what structurally prevents the old project's runaway-zoom bug.
+ * singleton (graph/graphData.ts), continuously laid out by
+ * GraphPhysicsEngine (graph/physics.ts) rather than a one-shot static
+ * layout. Camera motion is exclusively driven through CameraController
+ * (graph/CameraController.ts) — nothing else in this component is allowed
+ * to touch the Sigma camera directly, which is what structurally prevents
+ * the old project's runaway-zoom bug.
  *
- * Click selects a node (drives the NotePane sidebar); double-click sends
- * the `open` command so Emacs jumps to it, mirroring the old project's
- * "open in Emacs" affordance but as a direct graph interaction instead of
- * a context-menu-only action.
+ * Click selects a node (drives the NotePane sidebar); dragging repositions
+ * it (pins it during the drag, then releases it back to the simulation);
+ * double-click sends the `open` command so Emacs jumps to it. In "local"
+ * graphViewMode (settingsStore), only the focused node's neighborhood is
+ * simulated/shown, filling the whole canvas -- a full alternate mode, not
+ * just the corner widget.
  */
 export function GraphCanvas({
   onReady,
@@ -36,12 +43,14 @@ export function GraphCanvas({
   const containerRef = useRef<HTMLDivElement>(null)
   const sigmaRef = useRef<Sigma | null>(null)
   const cameraControllerRef = useRef<CameraController | null>(null)
+  const physicsRef = useRef<GraphPhysicsEngine | null>(null)
   const refsRef = useRef<ReducerRefs>({
     hoveredNodeId: null,
     selectedNodeId: null,
     filters: useAppStore.getState().filters,
     searchQuery: useAppStore.getState().searchQuery,
     colorMode: useAppStore.getState().colorMode,
+    localScope: null,
   })
 
   const graphVersion = useAppStore((state) => state.graphVersion)
@@ -51,6 +60,8 @@ export function GraphCanvas({
   const searchQuery = useAppStore((state) => state.searchQuery)
   const themeVersion = useAppStore((state) => state.themeVersion)
   const colorMode = useAppStore((state) => state.colorMode)
+  const physics = useSettingsStore((state) => state.physics)
+  const graphViewMode = useSettingsStore((state) => state.graphViewMode)
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -68,9 +79,47 @@ export function GraphCanvas({
     })
     sigmaRef.current = sigma
     cameraControllerRef.current = createSigmaCameraController(sigma)
+    physicsRef.current = new GraphPhysicsEngine(graph, useSettingsStore.getState().physics, () =>
+      sigma.refresh({ skipIndexation: true }),
+    )
+    physicsRef.current.rebuild()
     onReady?.({ cameraController: cameraControllerRef.current, sigma })
 
+    let draggedNode: string | null = null
+    let dragStart: { x: number; y: number } | null = null
+    let didDrag = false
+
+    sigma.on('downNode', ({ node, event }) => {
+      draggedNode = node
+      dragStart = { x: event.x, y: event.y }
+      didDrag = false
+      sigma.getCamera().disable()
+    })
+    sigma.getMouseCaptor().on('mousemovebody', (event) => {
+      if (!draggedNode) return
+      if (!didDrag && dragStart) {
+        const dx = event.x - dragStart.x
+        const dy = event.y - dragStart.y
+        if (Math.hypot(dx, dy) > DRAG_THRESHOLD) didDrag = true
+      }
+      if (!didDrag) return
+      const pos = sigma.viewportToGraph(event)
+      physicsRef.current?.pin(draggedNode, pos.x, pos.y)
+      sigma.refresh({ skipIndexation: true })
+    })
+    sigma.getMouseCaptor().on('mouseup', () => {
+      if (draggedNode) {
+        physicsRef.current?.unpin(draggedNode)
+        draggedNode = null
+      }
+      sigma.getCamera().enable()
+    })
+
     sigma.on('clickNode', ({ node }) => {
+      if (didDrag) {
+        didDrag = false
+        return
+      }
       useAppStore.getState().setSelectedNodeId(node)
     })
     sigma.on('clickStage', () => {
@@ -94,28 +143,34 @@ export function GraphCanvas({
     return () => {
       cameraControllerRef.current?.cancelFollow()
       cameraControllerRef.current = null
+      physicsRef.current?.destroy()
+      physicsRef.current = null
       sigma.kill()
       sigmaRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Re-layout on every graph mutation. Synchronous forceatlas2.assign() is
-  // fine at MVP scale (typical vaults: 1k-10k nodes); offloading to a worker
-  // is a documented later optimization, not required for the first PR.
+  // Recompute local-mode scope and rebuild the physics simulation whenever
+  // the graph changes, the view mode toggles, or the focused node changes.
+  // Rebuilding respects the current scope filter so hidden (out-of-scope)
+  // nodes never influence the visible layout's forces.
   useEffect(() => {
     if (graph.order === 0) return
-    let needsRandomInit = false
-    graph.forEachNode((_, attrs) => {
-      if (typeof attrs.x !== 'number' || typeof attrs.y !== 'number') needsRandomInit = true
-    })
-    if (needsRandomInit) random.assign(graph)
-    forceAtlas2.assign(graph, {
-      iterations: LAYOUT_ITERATIONS,
-      settings: forceAtlas2.inferSettings(graph),
-    })
+    const focusId = selectedNodeId ?? activeNodeId
+    const scope =
+      graphViewMode === 'local' && focusId && graph.hasNode(focusId)
+        ? findNthNeighbors(graph, focusId, LOCAL_VIEW_DEPTH)
+        : null
+    refsRef.current.localScope = scope
+    physicsRef.current?.rebuild(scope ? (id) => scope.has(id) : undefined)
     sigmaRef.current?.refresh()
-  }, [graphVersion])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [graphVersion, graphViewMode, activeNodeId, selectedNodeId])
+
+  useEffect(() => {
+    physicsRef.current?.applySettings(physics)
+  }, [physics])
 
   useEffect(() => {
     if (activeNodeId) cameraControllerRef.current?.followNode(activeNodeId)
@@ -143,7 +198,7 @@ export function GraphCanvas({
 
   // Theme changes recolor via the reducers above (no re-layout needed) --
   // just a plain refresh, kept separate from the graphVersion effect so a
-  // theme switch never triggers a disruptive forceatlas2 re-layout.
+  // theme switch never triggers a disruptive re-layout.
   useEffect(() => {
     if (!sigmaRef.current) return
     sigmaRef.current.setSetting('defaultNodeColor', graphTheme.nodeDefault)

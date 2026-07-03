@@ -1,109 +1,116 @@
-import { useMemo } from 'react'
-import { graph } from '../../graph/graphData'
-import { GraphNode } from '../../protocol/schema'
+import { useEffect } from 'react'
 import { useAppStore } from '../../store/appStore'
+import { useAgendaStore } from '../../store/agendaStore'
+import { AgendaLine } from '../../protocol/schema'
 
 const DONE_STATES = new Set(['DONE', 'CANCELLED', 'CANCELED'])
 
-function earliestDate(node: GraphNode): string {
-  return node.deadline ?? node.scheduled ?? '9999'
-}
-
-function groupByTodoState(nodes: GraphNode[]): Map<string, GraphNode[]> {
-  const groups = new Map<string, GraphNode[]>()
-  for (const node of nodes) {
-    if (!node.todo) continue
-    const list = groups.get(node.todo) ?? []
-    list.push(node)
-    groups.set(node.todo, list)
-  }
-  for (const list of groups.values()) {
-    list.sort((a, b) => earliestDate(a).localeCompare(earliestDate(b)))
-  }
-  // Not-done states first (so DONE/CANCELLED columns end up on the right).
-  return new Map(
-    Array.from(groups.entries()).sort(([a], [b]) => {
-      const aDone = DONE_STATES.has(a) ? 1 : 0
-      const bDone = DONE_STATES.has(b) ? 1 : 0
-      return aDone - bDone || a.localeCompare(b)
-    }),
-  )
+function accentColorFor(line: AgendaLine): string {
+  if (!line.todo) return 'transparent'
+  if (DONE_STATES.has(line.todo)) return 'var(--ascipio-accent-green)'
+  return 'var(--ascipio-accent-red)'
 }
 
 /**
- * Task/agenda view: every node carrying a TODO state (from either the graph
- * payload's precomputed todo/priority/scheduled/deadline fields -- no extra
- * backend round-trip needed), grouped into Kanban-style columns by state
- * and sorted by deadline/scheduled date. Covers the "task management" use
- * case the graph view alone doesn't serve well.
+ * The agenda view is a thin viewer over Emacs's own `org-agenda` -- see
+ * org-ascipio.el's Agenda section and docs/PROTOCOL.md. There is no
+ * client-side scheduling/matching logic here: the list of selectable
+ * views is exactly the user's own `org-agenda-custom-commands` (plus the
+ * two built-ins, "a" and "t"), and each line is the literal text Emacs's
+ * agenda buffer rendered, so this can never drift from what `M-x
+ * org-agenda` itself would show. Deliberately does not work without a
+ * live Emacs connection -- there is no synthetic/demo agenda data, since
+ * a fake agenda would be exactly the kind of half-implemented feature
+ * this view is designed to avoid.
  */
 export function AgendaView() {
-  const graphVersion = useAppStore((state) => state.graphVersion)
+  const connectionStatus = useAppStore((state) => state.connectionStatus)
+  const sendCommand = useAppStore((state) => state.sendCommand)
   const setSelectedNodeId = useAppStore((state) => state.setSelectedNodeId)
   const setActiveNodeId = useAppStore((state) => state.setActiveNodeId)
-  const setViewMode = useAppStore((state) => state.setViewMode)
-  const sendCommand = useAppStore((state) => state.sendCommand)
 
-  const groups = useMemo(() => {
-    const nodes = graph.mapNodes((_, attrs) => attrs as unknown as GraphNode)
-    return groupByTodoState(nodes)
-  }, [graphVersion])
+  const views = useAgendaStore((state) => state.views)
+  const selectedKey = useAgendaStore((state) => state.selectedKey)
+  const setSelectedKey = useAgendaStore((state) => state.setSelectedKey)
+  const lines = useAgendaStore((state) => state.lines)
+  const loading = useAgendaStore((state) => state.loading)
+  const setLoading = useAgendaStore((state) => state.setLoading)
 
-  const openInGraph = (id: string) => {
-    setSelectedNodeId(id)
-    setActiveNodeId(id)
-    setViewMode('graph')
+  // Auto-select the first available view once connected, if none chosen yet.
+  useEffect(() => {
+    if (!selectedKey && views.length > 0) setSelectedKey(views[0].key)
+  }, [views, selectedKey, setSelectedKey])
+
+  const runView = (key: string) => {
+    setSelectedKey(key)
+    setLoading(true)
+    sendCommand?.({ command: 'agenda:run', data: { key } })
   }
 
-  if (groups.size === 0) {
+  const openLine = (line: AgendaLine) => {
+    if (line.isHeader) return
+    if (line.id) {
+      setSelectedNodeId(line.id)
+      setActiveNodeId(line.id)
+    }
+    if (line.id || line.file) {
+      sendCommand?.({
+        command: 'open',
+        data: { id: line.id ?? undefined, file: line.file ?? undefined, pos: line.pos ?? undefined },
+      })
+    }
+  }
+
+  if (connectionStatus !== 'open') {
     return (
-      <div className="ascipio-muted flex h-full w-full items-center justify-center">
-        No TODO items found in this vault.
+      <div className="ascipio-muted flex h-full w-full flex-col items-center justify-center gap-2 text-center">
+        <div className="text-sm">Agenda needs a live Emacs connection.</div>
+        <div className="max-w-md text-xs">
+          This view mirrors your real <code>org-agenda</code> exactly (including any custom views
+          you've configured) rather than reimplementing scheduling logic — there's no offline demo
+          for it.
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="flex h-full w-full gap-3 overflow-x-auto p-4">
-      {Array.from(groups.entries()).map(([state, nodes]) => (
-        <div key={state} className="ascipio-chip flex w-64 shrink-0 flex-col rounded-lg">
-          <div className="ascipio-muted border-b border-[var(--ascipio-border)] px-3 py-2 text-xs font-semibold uppercase tracking-wide">
-            {state} ({nodes.length})
-          </div>
-          <div className="flex-1 space-y-2 overflow-y-auto p-2">
-            {nodes.map((node) => (
-              <div key={node.id} className="ascipio-panel-solid rounded-md p-2 text-xs">
-                <button onClick={() => openInGraph(node.id)} className="block w-full text-left font-medium hover:underline">
-                  {node.priority ? `[#${node.priority}] ` : ''}
-                  {node.title}
-                </button>
-                <div className="ascipio-muted mt-1 flex flex-wrap gap-1">
-                  {node.deadline && (
-                    <span className="rounded bg-[var(--ascipio-accent-red)]/20 px-1 py-0.5 text-[var(--ascipio-accent-red)]">
-                      due {node.deadline.slice(0, 10)}
-                    </span>
-                  )}
-                  {node.scheduled && !node.deadline && (
-                    <span className="ascipio-chip rounded px-1 py-0.5">{node.scheduled.slice(0, 10)}</span>
-                  )}
-                  {node.tags.map((tag) => (
-                    <span key={tag} className="ascipio-chip rounded px-1 py-0.5">
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-                <button
-                  onClick={() => sendCommand?.({ command: 'open', data: { id: node.id } })}
-                  disabled={!sendCommand}
-                  className="mt-1.5 text-[var(--ascipio-accent-blue)] hover:underline disabled:opacity-40"
-                >
-                  Open in Emacs
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
+    <div className="flex h-full w-full flex-col">
+      <div className="ascipio-panel-solid flex shrink-0 items-center gap-1 border-b p-2">
+        {views.length === 0 && <span className="ascipio-muted text-xs">No agenda views available.</span>}
+        {views.map((view) => (
+          <button
+            key={view.key}
+            onClick={() => runView(view.key)}
+            className={`ascipio-chip-hover rounded px-2.5 py-1 text-xs ${selectedKey === view.key ? 'ascipio-chip' : ''}`}
+          >
+            {view.description}
+          </button>
+        ))}
+        {loading && <span className="ascipio-muted ml-2 text-xs">Running…</span>}
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-2 font-mono text-xs">
+        {lines === null && !loading && (
+          <div className="ascipio-muted p-4 text-center">Pick a view above to run it.</div>
+        )}
+        {lines?.map((line, i) =>
+          line.isHeader ? (
+            <div key={i} className="ascipio-muted mt-3 whitespace-pre px-2 py-1 first:mt-0">
+              {line.text}
+            </div>
+          ) : (
+            <button
+              key={i}
+              onClick={() => openLine(line)}
+              className="ascipio-chip-hover flex w-full items-start gap-2 whitespace-pre rounded px-2 py-1 text-left"
+              style={{ borderLeft: `2px solid ${accentColorFor(line)}` }}
+            >
+              {line.text}
+            </button>
+          ),
+        )}
+      </div>
     </div>
   )
 }

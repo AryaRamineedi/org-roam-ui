@@ -24,7 +24,7 @@ fighting it:
   a live Emacs push and a built-in preset (`theme/presets.ts`) go through.
 - **The whole app re-skins, not just the graph.** Every chrome panel
   (`TopBar`, `NotePane`, `FilterPanel`, `SearchBox`, `LocalGraphWidget`,
-  `DebugPanel`, `ThemePicker`) reads color through the shared
+  `SettingsPanel`) reads color through the shared
   `.ascipio-panel`/`.ascipio-chip`/`.ascipio-muted`/`.ascipio-button-primary`
   classes in `index.css`, which resolve to the same `--ascipio-*` CSS
   variables the graph reads via `graph/graphTheme.ts`. Switching a theme
@@ -33,6 +33,23 @@ fighting it:
   simulated live Emacs push.
 - **Six curated presets** (`midnight`, `nord`, `solarized-dark/light`,
   `gruvbox`, `rose-pine`) cover the non-Emacs-connected case.
+- **Continuous physics** (`graph/physics.ts`, a d3-force simulation wrapped
+  by `GraphPhysicsEngine`) replaced the old one-shot static layout — nodes
+  repel, links pull, and a per-node centering spring (`forceX`/`forceY`,
+  not `forceCenter`, which only recenters the graph's *mean* and does
+  nothing to stop an individual weakly-linked node drifting away forever)
+  keeps the whole graph legibly bounded instead of collapsing into a tangle
+  with flung outliers. Fully configurable live from the Settings panel's
+  Physics tab (repulsion, link distance/strength, centering, collision
+  radius, alpha/velocity decay), with drag-to-reposition (pins a node during
+  drag, releases it back to the simulation on mouseup), and a "local" graph
+  view mode that simulates/shows only the focused node's neighborhood as a
+  full alternate main view (not just the corner widget). A **focus mode**
+  (`App.tsx`, toggled from Settings → View, exits on Escape) hides all
+  chrome for distraction-free viewing. All of this — physics parameters,
+  color mode, view mode, local-widget visibility — round-trips to real
+  Emacs `defcustom`s via `config:defaults` on connect and an "export as
+  elisp" button in Settings → Export (see `docs/PROTOCOL.md`).
 
 What's still missing is everything downstream of "the colors are correct":
 information-dense visual language (color meaning something beyond "this is
@@ -42,10 +59,10 @@ depth/hierarchy. That's this roadmap.
 ## Phase 1 — Node visual language (color-codes information)
 
 Done, alongside this document (`graph/nodeColor.ts`, `graph/graphTheme.ts`,
-`views/Settings/ColorModeToggle.tsx`) — previously every node was the same
-flat accent-blue regardless of what it represented:
+`views/Settings/SettingsPanel.tsx`'s Appearance tab) — previously every node
+was the same flat accent-blue regardless of what it represented:
 
-- **A "color by" toggle** (Tag / TODO / Plain, next to the filter panel)
+- **A "color by" toggle** (Tag / TODO / Plain, in Settings → Appearance)
   switches `graphReducers.ts`'s node coloring mode live.
 - **Tag mode**: nodes are colored by hashing their full tag *set* (sorted,
   joined) to one of the active theme's 8 accent colors — deterministic

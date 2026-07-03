@@ -64,12 +64,15 @@ export function DebugPanel({ handle }: { handle: GraphCanvasHandle | null }) {
   const withinBounds = observed ? observed.min >= MIN_RATIO && observed.max <= MAX_RATIO : null
 
   return (
-    <div className="ascipio-panel pointer-events-auto flex flex-col gap-2 rounded-lg p-3 text-xs backdrop-blur">
-      <div className="font-semibold">Camera fix demo</div>
+    <div className="flex flex-col gap-2 text-xs">
+      <div className="ascipio-muted">
+        Fires a burst of rapid synthetic "follow" events (simulating a fast cursor sweep across
+        headings in Emacs) and checks the camera never runs away or leaves its clamped zoom range.
+      </div>
       <button
         onClick={fireBurst}
         disabled={running}
-        className="ascipio-button-primary rounded px-2 py-1 font-medium disabled:opacity-50"
+        className="ascipio-button-primary w-fit rounded px-2 py-1 font-medium disabled:opacity-50"
       >
         {running ? 'Firing follow burst…' : `Fire ${BURST_SIZE} rapid follow events`}
       </button>

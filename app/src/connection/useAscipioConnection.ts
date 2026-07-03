@@ -3,6 +3,8 @@ import { AscipioClient } from './client'
 import { applyPatch, applySnapshot } from '../graph/graphData'
 import { applyTheme } from '../theme/applyTheme'
 import { useAppStore } from '../store/appStore'
+import { useAgendaStore } from '../store/agendaStore'
+import { useSettingsStore } from '../store/settingsStore'
 
 /**
  * Owns the lifetime of the websocket connection to the Emacs backend and
@@ -43,6 +45,17 @@ export function useAscipioConnection(): void {
             if (message.data.commandName === 'follow' || message.data.commandName === 'zoom') {
               setActiveNodeId(message.data.id)
             }
+            return
+          case 'agenda:views':
+            useAgendaStore.getState().setViews(message.data.views)
+            return
+          case 'agenda:result':
+            useAgendaStore.getState().setResult(message.data.key, message.data.lines)
+            return
+          case 'config:defaults':
+            useSettingsStore
+              .getState()
+              .receiveEmacsDefaults(message.data, useAppStore.getState().setColorMode)
             return
           case 'error':
             console.error('[org-ascipio] server error:', message.data.message)

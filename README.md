@@ -37,12 +37,31 @@ follow-mode bug. On top of that:
 - **Local-graph corner widget**: an Obsidian-style always-visible mini view
   of the focused node's immediate neighborhood, independent of the main
   graph's pan/zoom.
-- **Agenda view**: every node carrying a TODO state, grouped into
-  Kanban-style columns by state and sorted by deadline/scheduled date —
-  no backend changes needed, since the graph payload already carries this.
+- **Agenda view**: a real pass-through of Emacs's own `org-agenda`, not a
+  reimplementation — the frontend lists whatever views your `M-x
+  org-agenda` dispatch offers (the default `a`/`t`, plus every entry in
+  `org-agenda-custom-commands`), runs the chosen one headlessly in Emacs,
+  and renders the actual rendered agenda buffer line-for-line. No
+  client-side scheduling/matching logic exists, by design — a half-baked
+  agenda that only understood roam-node TODOs was explicitly rejected in
+  favor of full parity with however you've configured Emacs.
 - **Search**: client-side title/tag search with live graph highlighting.
 - **Filters**: tag include/exclude, hide-orphans, hide-completed-TODOs,
   applied live via Sigma's node/edge reducers.
+- **Continuous graph physics**: a live d3-force simulation (repulsion, link
+  attraction, per-node centering, collision avoidance) replaces the old
+  static one-shot layout, with drag-to-reposition and every parameter
+  tunable live from Settings → Physics. A **local graph view mode**
+  (Settings → View) swaps the entire main canvas to just the focused node's
+  neighborhood — a full alternate mode, not just the corner widget, which
+  can also be toggled on/off independently.
+- **Focus mode**: hides all chrome (Settings → View → "Enter focus mode",
+  or `Escape` to exit) for distraction-free viewing of just the graph.
+- **Settings panel with elisp export**: one place (⚙ Settings) for physics,
+  view mode, filters, appearance/theme, and an "Export" tab that generates
+  real `setq` forms for the matching `org-ascipio-default-*` `defcustom`s —
+  paste them into your init file and future sessions start from your
+  current configuration instead of the built-in defaults.
 - **Live Emacs theme sync**: any Emacs theme (not just Doom themes) is
   extracted from faces and pushed automatically on every theme change
   (`enable-theme-functions` — no manual `M-x` needed, unlike the old
@@ -204,9 +223,10 @@ npm run build:dist    # type-checks and rebuilds the committed ../dist
 
 While running `npm run dev` without a live Emacs connection, use the
 in-app **"Load demo graph"** button to load synthetic data, and the
-**camera fix demo** panel (bottom-right) to fire a burst of rapid synthetic
-`follow` events and confirm the camera settles smoothly with no runaway
-zoom.
+**camera fix demo** panel (⚙ Settings → Diagnostics) to fire a burst of
+rapid synthetic `follow` events and confirm the camera settles smoothly with
+no runaway zoom. The agenda view intentionally shows nothing in demo mode —
+it only renders real `org-agenda` output from a live Emacs connection.
 
 ## Repository layout
 
