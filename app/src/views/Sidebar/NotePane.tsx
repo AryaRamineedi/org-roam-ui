@@ -106,9 +106,9 @@ export function NotePane() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3">
-        {error && <div className="text-[var(--ascipio-accent-red)]">{error}</div>}
-        {!error && text === null && <div className="ascipio-muted">Loading…</div>}
+      <div className="ascipio-prose flex-1 overflow-y-auto p-3">
+        {error && <div className="font-mono text-[var(--ascipio-accent-red)]">{error}</div>}
+        {!error && text === null && <div className="ascipio-muted font-mono">Loading…</div>}
         {!error &&
           text !== null &&
           renderOrgText(text, {
@@ -138,7 +138,7 @@ function LinkSection({
 }) {
   return (
     <div className="max-h-32 shrink-0 overflow-y-auto border-t border-[var(--ascipio-border)] p-2">
-      <div className="ascipio-muted mb-1 px-1 text-xs font-semibold uppercase tracking-wide">
+      <div className="ascipio-label mb-1 px-1">
         {title} ({ids.length})
       </div>
       {ids.map((id) => (

@@ -30,7 +30,7 @@ export function TopBar({ graphHandle }: { graphHandle: GraphCanvasHandle | null 
           <button
             key={mode}
             onClick={() => setViewMode(mode)}
-            className={`ascipio-chip-hover px-3 py-1.5 capitalize ${viewMode === mode ? 'ascipio-chip' : ''}`}
+            className={`ascipio-chip-hover px-3 py-1.5 capitalize ${viewMode === mode ? 'ascipio-chip-selected' : ''}`}
           >
             {mode}
           </button>

@@ -25,7 +25,7 @@ export interface GraphThemeColors {
 const DEFAULT_ACCENTS = ['#ef5b5b', '#f5a742', '#f5da42', '#5bd67e', '#4fd6d0', '#5b8def', '#a684f2', '#e05bd0']
 
 const DEFAULT_DARK: GraphThemeColors = {
-  nodeDefault: '#8aa2c8',
+  nodeDefault: '#4fd6d0',
   edgeDefault: 'rgba(148, 163, 184, 0.35)',
   dim: 'rgba(148, 163, 184, 0.15)',
   selected: '#f5b942',
@@ -49,7 +49,7 @@ function withAlpha(hex: string, alpha: number): string {
 }
 
 export function updateGraphTheme(tokens: ThemeTokens): void {
-  graphTheme.nodeDefault = tokens.accent.blue
+  graphTheme.nodeDefault = tokens.accent.cyan
   graphTheme.edgeDefault = withAlpha(tokens.fgMuted, 0.35)
   graphTheme.dim = withAlpha(tokens.fgMuted, 0.15)
   graphTheme.selected = tokens.accent.orange

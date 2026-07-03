@@ -141,7 +141,7 @@ function renderLink(
       <button
         key={key}
         onClick={() => options.onNavigateToId(id)}
-        className="text-[var(--ascipio-accent-blue)] underline decoration-dotted underline-offset-2 hover:opacity-80"
+        className="text-[var(--ascipio-accent-secondary)] underline decoration-dotted underline-offset-2 hover:opacity-80"
       >
         {label}
       </button>
@@ -155,7 +155,7 @@ function renderLink(
         href={target}
         target="_blank"
         rel="noreferrer"
-        className="text-[var(--ascipio-accent-blue)] underline decoration-dotted underline-offset-2 hover:opacity-80"
+        className="text-[var(--ascipio-accent-secondary)] underline decoration-dotted underline-offset-2 hover:opacity-80"
       >
         {desc || target}
       </a>

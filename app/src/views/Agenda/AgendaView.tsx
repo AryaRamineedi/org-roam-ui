@@ -82,7 +82,7 @@ export function AgendaView() {
           <button
             key={view.key}
             onClick={() => runView(view.key)}
-            className={`ascipio-chip-hover rounded px-2.5 py-1 text-xs ${selectedKey === view.key ? 'ascipio-chip' : ''}`}
+            className={`ascipio-chip-hover rounded px-2.5 py-1 text-xs ${selectedKey === view.key ? 'ascipio-chip-selected' : ''}`}
           >
             {view.description}
           </button>

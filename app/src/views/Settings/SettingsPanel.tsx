@@ -65,7 +65,7 @@ export function SettingsPanel({
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`ascipio-chip-hover mb-1 rounded px-2 py-1.5 text-left ${tab === t ? 'ascipio-chip' : ''}`}
+                className={`ascipio-chip-hover mb-1 rounded px-2 py-1.5 text-left ${tab === t ? 'ascipio-chip-selected' : ''}`}
               >
                 {t}
               </button>
@@ -157,7 +157,7 @@ export function SettingsPanel({
                       <button
                         key={mode}
                         onClick={() => setGraphViewMode(mode)}
-                        className={`ascipio-chip-hover px-3 py-1.5 capitalize ${graphViewMode === mode ? 'ascipio-chip' : ''}`}
+                        className={`ascipio-chip-hover px-3 py-1.5 capitalize ${graphViewMode === mode ? 'ascipio-chip-selected' : ''}`}
                       >
                         {mode}
                       </button>
@@ -203,7 +203,7 @@ export function SettingsPanel({
                       <button
                         key={mode}
                         onClick={() => setColorMode(mode)}
-                        className={`ascipio-chip-hover px-3 py-1.5 capitalize ${colorMode === mode ? 'ascipio-chip' : ''}`}
+                        className={`ascipio-chip-hover px-3 py-1.5 capitalize ${colorMode === mode ? 'ascipio-chip-selected' : ''}`}
                       >
                         {mode}
                       </button>

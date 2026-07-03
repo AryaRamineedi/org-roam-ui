@@ -26,7 +26,7 @@ export function Slider({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-[var(--ascipio-accent-blue)]"
+        className="w-full accent-[var(--ascipio-accent-primary)]"
       />
     </label>
   )

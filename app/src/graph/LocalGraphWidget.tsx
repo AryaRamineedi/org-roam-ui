@@ -8,6 +8,8 @@ import { graphTheme } from './graphTheme'
 import { useAppStore } from '../store/appStore'
 
 const DEFAULT_DEPTH = 1
+const GRAPH_LABEL_FONT =
+  "ui-monospace, 'SF Mono', 'JetBrains Mono', 'Cascadia Code', Menlo, Consolas, 'Liberation Mono', monospace"
 
 /**
  * Obsidian-style local-graph corner widget: a small, always-visible, second
@@ -37,6 +39,7 @@ export function LocalGraphWidget() {
     const sigma = new Sigma(localGraphRef.current, containerRef.current, {
       renderLabels: true,
       labelRenderedSizeThreshold: 0,
+      labelFont: GRAPH_LABEL_FONT,
       defaultNodeColor: graphTheme.nodeDefault,
       defaultEdgeColor: graphTheme.edgeDefault,
       minCameraRatio: 0.3,
@@ -86,14 +89,14 @@ export function LocalGraphWidget() {
 
   return (
     <div className="ascipio-panel pointer-events-auto flex w-64 flex-col overflow-hidden rounded-lg backdrop-blur">
-      <div className="ascipio-muted flex items-center justify-between border-b border-[var(--ascipio-border)] px-2 py-1 text-[10px] uppercase tracking-wide">
+      <div className="ascipio-label flex items-center justify-between border-b border-[var(--ascipio-border)] px-2 py-1">
         <span>Local graph</span>
         <div className="flex gap-1">
           {[1, 2].map((d) => (
             <button
               key={d}
               onClick={() => setDepth(d)}
-              className={`ascipio-chip-hover rounded px-1.5 ${depth === d ? 'ascipio-chip' : ''}`}
+              className={`ascipio-chip-hover rounded px-1.5 ${depth === d ? 'ascipio-chip-selected' : ''}`}
             >
               {d} hop
             </button>

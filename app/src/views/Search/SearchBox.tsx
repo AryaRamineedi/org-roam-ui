@@ -44,7 +44,7 @@ export function SearchBox() {
           if (e.key === 'Escape') setSearchQuery('')
         }}
         placeholder="Search notes and tags…"
-        className="ascipio-panel w-full rounded-lg px-3 py-1.5 text-xs backdrop-blur placeholder:opacity-50 focus:outline-none focus:ring-1 focus:ring-[var(--ascipio-accent-blue)]"
+        className="ascipio-panel w-full rounded-lg px-3 py-1.5 text-xs placeholder:opacity-50 focus:outline-none focus:ring-1 focus:ring-[var(--ascipio-accent-primary)]"
       />
       {focused && results.length > 0 && (
         <div className="ascipio-panel-solid absolute left-0 top-full z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-lg text-xs backdrop-blur">

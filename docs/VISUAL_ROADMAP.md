@@ -101,18 +101,30 @@ was the same flat accent-blue regardless of what it represented:
 
 ## Phase 3 — Typography & layout system
 
-- Establish a real type scale (currently ad hoc `text-xs`/`text-sm`/`text-base`
-  sprinkled per-component) — a `theme/typography.ts` or Tailwind theme
-  extension defining 4-5 steps, applied consistently across NotePane,
-  AgendaView, and the org-text renderer's heading levels (`h1`..`h6` right
-  now just get `font-semibold` and nothing else — no visual hierarchy
+Partly done: the whole UI chrome (panels, buttons, labels, graph node/edge
+labels) now runs on a monospace type family (`--ascipio-font-mono` in
+`index.css`, and `GRAPH_LABEL_FONT` mirroring it for Sigma's canvas-drawn
+labels, which can't read CSS custom properties) — a deliberate "technical
+widget" aesthetic (inspired by quickshell/desktop-widget shells like
+ryoku.dev's theme) rather than a generic app-chrome sans. Note *content*
+specifically breaks from this via a `.ascipio-prose` wrapper
+(`views/Sidebar/NotePane.tsx`) that switches to a humanist sans for
+long-form readability — so headings/labels/UI read as "technical," body
+prose still reads comfortably. A companion two-tone accent convention also
+landed: `--ascipio-accent-primary` (orange) marks active/selected/primary-
+action state, `--ascipio-accent-secondary` (cyan) marks links and is the
+graph's default node color, both as semantic aliases over the existing
+8-color accent palette so live Emacs theme sync still drives them.
+
+Still open:
+
+- Establish a real type *scale* (currently ad hoc `text-xs`/`text-sm`/`text-base`
+  sprinkled per-component) — 4-5 defined steps, applied consistently across
+  NotePane, AgendaView, and the org-text renderer's heading levels (`h1`..`h6`
+  right now just get `font-semibold` and nothing else — no visual hierarchy
   between a level-1 and level-4 heading).
 - Consistent spacing scale for panel padding/gaps (currently `p-2`/`p-3`
   chosen ad hoc per component).
-- A monospace or slightly-serif reading font for note content specifically
-  (NotePane currently inherits the UI sans-serif everywhere, including body
-  text, which reads worse for long-form notes than a body-text-appropriate
-  font would).
 
 ## Phase 4 — Note-content rendering fidelity
 

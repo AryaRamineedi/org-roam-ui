@@ -63,7 +63,7 @@ export function FilterControls() {
                   className={
                     'rounded px-1.5 py-0.5 ' +
                     (included
-                      ? 'bg-[var(--ascipio-accent-blue)] text-white'
+                      ? 'bg-[var(--ascipio-accent-primary)] text-[var(--ascipio-bg)]'
                       : excluded
                         ? 'bg-[var(--ascipio-accent-red)]/30 line-through'
                         : 'ascipio-chip ascipio-chip-hover')

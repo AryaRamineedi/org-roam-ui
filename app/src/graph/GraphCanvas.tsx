@@ -13,6 +13,11 @@ import { useSettingsStore } from '../store/settingsStore'
 const LOCAL_VIEW_DEPTH = 2
 /** Pixels of movement before a node press counts as a drag, not a click. */
 const DRAG_THRESHOLD = 3
+/** Sigma draws labels on a canvas, which can't read CSS custom properties --
+ *  this mirrors index.css's --ascipio-font-mono so graph labels match the
+ *  rest of the UI's technical/monospace typography. */
+const GRAPH_LABEL_FONT =
+  "ui-monospace, 'SF Mono', 'JetBrains Mono', 'Cascadia Code', Menlo, Consolas, 'Liberation Mono', monospace"
 
 export interface GraphCanvasHandle {
   cameraController: CameraController | null
@@ -70,6 +75,7 @@ export function GraphCanvas({
     const sigma = new Sigma(graph, containerRef.current, {
       renderLabels: true,
       labelRenderedSizeThreshold: 6,
+      labelFont: GRAPH_LABEL_FONT,
       defaultNodeColor: graphTheme.nodeDefault,
       defaultEdgeColor: graphTheme.edgeDefault,
       minCameraRatio: 0.05,

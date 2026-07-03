@@ -25,6 +25,19 @@
   --ascipio-accent-blue: #5b8def;
   --ascipio-accent-violet: #a684f2;
   --ascipio-accent-magenta: #e05bd0;
+
+  /* Semantic aliases, not pushed by ThemeTokens directly: orange reads as
+     the "live/primary" accent and cyan as "secondary/informational" across
+     the whole UI (buttons, active states, links), echoing the warm/cool
+     two-tone accent language of desktop widget shells like ryoku.dev's
+     quickshell theme -- still fully theme-reactive, since both resolve
+     through the accent variables above. */
+  --ascipio-accent-primary: var(--ascipio-accent-orange);
+  --ascipio-accent-secondary: var(--ascipio-accent-cyan);
+
+  --ascipio-font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', 'Cascadia Code', Menlo, Consolas,
+    'Liberation Mono', monospace;
+  --ascipio-font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
 html,
@@ -34,6 +47,7 @@ body,
   margin: 0;
   background: var(--ascipio-bg);
   color: var(--ascipio-fg);
+  font-family: var(--ascipio-font-mono);
 }
 
 /*
@@ -45,14 +59,22 @@ body,
  */
 @layer components {
   .ascipio-panel {
-    background-color: color-mix(in srgb, var(--ascipio-bg-elevated) 88%, transparent);
+    background-color: color-mix(in srgb, var(--ascipio-bg-elevated) 82%, transparent);
     border: 1px solid var(--ascipio-border);
     color: var(--ascipio-fg);
+    backdrop-filter: blur(14px);
+    box-shadow:
+      0 1px 0 0 color-mix(in srgb, var(--ascipio-fg) 6%, transparent) inset,
+      0 8px 24px -12px rgba(0, 0, 0, 0.5);
   }
   .ascipio-panel-solid {
-    background-color: var(--ascipio-bg-elevated);
+    background-color: color-mix(in srgb, var(--ascipio-bg-elevated) 96%, transparent);
     border: 1px solid var(--ascipio-border);
     color: var(--ascipio-fg);
+    backdrop-filter: blur(14px);
+    box-shadow:
+      0 1px 0 0 color-mix(in srgb, var(--ascipio-fg) 6%, transparent) inset,
+      0 12px 32px -14px rgba(0, 0, 0, 0.6);
   }
   .ascipio-chip {
     background-color: color-mix(in srgb, var(--ascipio-fg) 12%, transparent);
@@ -61,11 +83,39 @@ body,
   .ascipio-chip-hover:hover {
     background-color: color-mix(in srgb, var(--ascipio-fg) 20%, transparent);
   }
+  /* The "this is the current option" state for segmented toggles (view mode,
+     graph/agenda tabs, settings tabs, local-graph hop depth, color mode) --
+     distinct from the neutral `.ascipio-chip` pill used for static buttons
+     and informational tags, so a tag chip doesn't visually read as "active." */
+  .ascipio-chip-selected {
+    background-color: color-mix(in srgb, var(--ascipio-accent-primary) 20%, transparent);
+    color: var(--ascipio-accent-primary);
+  }
   .ascipio-muted {
     color: var(--ascipio-fg-muted);
   }
   .ascipio-button-primary {
-    background-color: var(--ascipio-accent-blue);
-    color: white;
+    background-color: var(--ascipio-accent-primary);
+    color: var(--ascipio-bg);
+    font-weight: 600;
+  }
+  .ascipio-button-primary:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--ascipio-accent-primary) 85%, white);
+  }
+  /* Small uppercase section labels -- "LOCAL GRAPH", "LINKS (3)", panel
+     tab headers, etc. -- the technical/widget-y typographic signature
+     shared by every chrome panel in the app. */
+  .ascipio-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ascipio-fg-muted);
+  }
+  /* Wraps rendered note prose (org/renderOrgText.tsx): long-form body text
+     reads better in a humanist sans than the UI chrome's monospace. */
+  .ascipio-prose {
+    font-family: var(--ascipio-font-sans);
+    line-height: 1.6;
   }
 }
