@@ -1,37 +1,32 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# org-ascipio
+#
+# NOTE: /dist (the built frontend) is intentionally NOT ignored -- it is
+# committed so installing the Emacs package (org-ascipio.el etc.) requires
+# nothing but Emacs, no Node/pnpm build step. Only app/'s own local build
+# output and node_modules are ignored; `app/npm run build:dist` writes the
+# real artifact into /dist.
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
+# frontend (app/)
+app/node_modules
+app/dist
+app/*.tsbuildinfo
+app/coverage
 
-# testing
-/coverage
+# Tauri (src-tauri/)
+src-tauri/target
+src-tauri/gen
 
-# next.js
-/.next/
-
-# production
-/build
+# elisp
+*.elc
 
 # misc
 .DS_Store
 *.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# local env files
+*.log
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*.local
 
-# vercel
-.vercel
-
-#logs
-
-/.log/
+# legacy/ (old org-roam-ui reference project) keeps its own build/deps ignored too
+legacy/node_modules
+legacy/.next/
+legacy/build

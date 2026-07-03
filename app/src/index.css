@@ -1,0 +1,27 @@
+@import 'tailwindcss';
+
+/*
+ * Semantic theme tokens. In the target design (Phase 5) these are set live
+ * from Emacs's `theme` websocket message (ThemeTokens) via
+ * theme/applyTheme.ts, with a curated preset library as a fallback when no
+ * Emacs connection is active. The defaults below are just a reasonable
+ * dark palette so the app is usable before that pipeline exists.
+ */
+:root {
+  --ascipio-bg: #0b0f17;
+  --ascipio-bg-alt: #111826;
+  --ascipio-bg-elevated: #182236;
+  --ascipio-fg: #e6ebf5;
+  --ascipio-fg-muted: #93a1b8;
+  --ascipio-border: #26314a;
+  --ascipio-accent-blue: #5b8def;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background: var(--ascipio-bg);
+  color: var(--ascipio-fg);
+}
