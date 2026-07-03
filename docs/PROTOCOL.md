@@ -19,10 +19,13 @@ see the "Flexibility & extensibility" principles in the architecture plan.
   All structured, live, bidirectional data: graph state, commands.
 - **HTTP**, `http://127.0.0.1:35901` by default (`org-ascipio-http-port`).
   Serves the static frontend build (`org-ascipio-dist-dir`) for the browser
-  and xwidget-webkit run modes, plus `GET /health` (returns `200 ok`).
-  `GET /node/:id` (raw org text) and a consolidated `GET /file` (pluggable
-  image/file link resolution) are planned for the note-content rendering
-  phase — not implemented yet.
+  and xwidget-webkit run modes, plus `GET /health` (returns `200 ok`) and
+  `GET /node/:id` (raw org text of a node, narrowed to its heading if
+  `level > 0` — used by the NotePane sidebar). A consolidated `GET /file`
+  endpoint with a pluggable image/file link resolver (auto-detecting
+  org-attach/org-download/relative/absolute paths) is still planned, not
+  implemented yet — `/node/:id` returns raw org markup as-is, so `file:`/
+  image links inside it aren't resolved to servable URLs yet.
 
 Both servers are local-only and unauthenticated, matching the old
 org-roam-ui's threat model: they bind to localhost and assume anything that

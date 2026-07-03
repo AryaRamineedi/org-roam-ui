@@ -34,12 +34,12 @@
 ;; array, which is what the old project did on every graph update.
 ;;
 ;; Citation/reference link handling (org-roam-bibtex integration, `cite'/
-;; `ref' link types) and `/node/:id' + `/img/:file' (raw org text / image
-;; serving, and the pluggable file-link resolver pipeline described in the
-;; architecture plan) are intentionally not implemented yet -- documented
-;; gaps, not oversights; see docs/PROTOCOL.md. Likewise, full graph resend
-;; on every save (rather than a diffed `graph:patch') is a deliberate MVP
-;; simplification pending incremental-update support.
+;; `ref' link types) and `/img/:file' + a general file-link resolver
+;; pipeline (auto-detecting org-attach/org-download/relative/absolute paths,
+;; per the architecture plan) are intentionally not implemented yet --
+;; documented gaps, not oversights; see docs/PROTOCOL.md. Likewise, full
+;; graph resend on every save (rather than a diffed `graph:patch') is a
+;; deliberate MVP simplification pending incremental-update support.
 
 ;;; Code:
 
@@ -200,6 +200,18 @@ produces a plain string->string object, matching the protocol's
       (links . ,(vconcat (mapcar #'org-ascipio-db--link-alist links)))
       (tags . ,(vconcat all-tags)))))
 
+(defun org-ascipio-db-get-text (id)
+  "Return the raw org text of the node ID (narrowed to its heading, if any).
+Ported from the old org-roam-ui--get-text: file-level nodes (level 0) return
+the whole buffer; heading nodes are narrowed to just that subtree."
+  (let* ((node (org-roam-populate (org-roam-node-create :id id)))
+         (file (org-roam-node-file node)))
+    (org-roam-with-temp-buffer file
+      (when (> (org-roam-node-level node) 0)
+        (goto-char (org-roam-node-point node))
+        (org-narrow-to-element))
+      (buffer-substring-no-properties (point-min) (point-max)))))
+
 
 ;;;; HTTP + websocket server
 
@@ -286,6 +298,13 @@ commentary above and docs/PROTOCOL.md for the planned `graph:patch' diffing."
 
 (defservlet* health text/plain ()
   (insert "ok")
+  (httpd-send-header t "text/plain" 200 :Access-Control-Allow-Origin "*"))
+
+(defservlet* node/:id text/plain ()
+  "Serve the raw org text of node ID, for the frontend's note-preview sidebar."
+  (condition-case err
+      (insert (org-ascipio-db-get-text (org-link-decode id)))
+    (error (insert (format "org-ascipio: could not load node %s (%s)" id err))))
   (httpd-send-header t "text/plain" 200 :Access-Control-Allow-Origin "*"))
 
 (defun org-ascipio-server-start ()

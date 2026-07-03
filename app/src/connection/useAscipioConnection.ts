@@ -16,6 +16,7 @@ export function useAscipioConnection(): void {
   const bumpGraphVersion = useAppStore((state) => state.bumpGraphVersion)
   const setVariables = useAppStore((state) => state.setVariables)
   const setTheme = useAppStore((state) => state.setTheme)
+  const setSendCommand = useAppStore((state) => state.setSendCommand)
 
   useEffect(() => {
     const client = new AscipioClient({
@@ -48,7 +49,11 @@ export function useAscipioConnection(): void {
     })
     clientRef.current = client
     client.connect()
-    return () => client.close()
+    setSendCommand((message) => client.send(message))
+    return () => {
+      setSendCommand(null)
+      client.close()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 }

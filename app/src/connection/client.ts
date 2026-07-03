@@ -1,4 +1,5 @@
 import { ClientMessage, ServerMessage, parseServerMessage } from '../protocol/messages'
+import { DEFAULT_WS_URL } from './config'
 
 export type ConnectionStatus = 'connecting' | 'open' | 'closed' | 'reconnecting'
 
@@ -8,7 +9,7 @@ export interface AscipioClientOptions {
   onStatusChange?: (status: ConnectionStatus) => void
 }
 
-const DEFAULT_URL = 'ws://127.0.0.1:35903'
+const DEFAULT_URL = DEFAULT_WS_URL
 const MAX_BACKOFF_MS = 10_000
 const BASE_BACKOFF_MS = 500
 

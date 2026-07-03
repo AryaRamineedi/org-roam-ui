@@ -22,14 +22,33 @@ It runs three ways from the same build:
 
 ## Status
 
-Early skeleton. What works right now: the Emacs backend pushes live
-org-roam graph data (including TODO/priority/scheduled/deadline and
-precomputed backlinks) over a websocket, and the frontend renders it as a
-WebGL graph with a camera controller that fixes the old project's
-"infinite zoom" follow-mode bug. Task/agenda views, live theme sync, the
-local-graph mini-panel, note-content rendering, and search are designed but
-not yet built — see `docs/PROTOCOL.md` for what's implemented vs. planned,
-and the project's architecture plan for the full roadmap.
+The core app is functional: the Emacs backend pushes live org-roam graph
+data (including TODO/priority/scheduled/deadline and precomputed backlinks)
+over a websocket, and the frontend renders it as a WebGL graph with a
+camera controller that fixes the old project's "infinite zoom"
+follow-mode bug. On top of that:
+
+- **Click a node** to select it (double-click sends `open`, jumping to it
+  in Emacs); hovering highlights its neighborhood.
+- **Note-preview sidebar**: the node's raw org content (headings, links,
+  bold/italic/code — a lightweight renderer, not the full org-mode pipeline
+  yet), tags, TODO/priority/scheduled/deadline, and clickable
+  backlinks/forward-links, with an "Open in Emacs" button.
+- **Local-graph corner widget**: an Obsidian-style always-visible mini view
+  of the focused node's immediate neighborhood, independent of the main
+  graph's pan/zoom.
+- **Agenda view**: every node carrying a TODO state, grouped into
+  Kanban-style columns by state and sorted by deadline/scheduled date —
+  no backend changes needed, since the graph payload already carries this.
+- **Search**: client-side title/tag search with live graph highlighting.
+- **Filters**: tag include/exclude, hide-orphans, hide-completed-TODOs,
+  applied live via Sigma's node/edge reducers.
+
+Not yet built: diffed (rather than full-resend) graph updates, live Emacs
+theme sync, citation/reference links, and the pluggable file/image link
+resolver — see `docs/PROTOCOL.md` for the wire-protocol-level detail on
+what's implemented vs. planned. Visual/theming polish is the next major
+phase (see the visual roadmap once it lands).
 
 ## Running it
 
